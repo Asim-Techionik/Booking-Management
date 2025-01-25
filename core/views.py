@@ -169,8 +169,8 @@ class AccessorJobView(APIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         # Filter jobs based on the user's preference and 'pending' status
-        jobs = Job.objects.filter(status='pending', job__county__iexact=preference)  # Case-insensitive match
-        quotes = Quote.objects.filter(status='pending', quote__county__iexact=preference)  # Filter by related job's county
+        jobs = Job.objects.filter(status='pending', county__iexact=preference)  # Case-insensitive match
+        quotes = Quote.objects.filter(status='pending', county__iexact=preference)  # Filter by related job's county
 
         # Serialize the filtered jobs and quotes
         job_serializer = JobSerializer(jobs, many=True)
@@ -183,6 +183,8 @@ class AccessorJobView(APIView):
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+
 class JobSearchView(APIView):
     """
     View to search for jobs based on query parameters.
@@ -468,25 +470,6 @@ class MyBidsView(APIView):
                     }
                 },
             })
-
-        return Response(bid_data, status=status.HTTP_200_OK)
-        # "building_type": null,
-        # "status": "pending",
-        # "epreferred_dat": "",
-        # "preferred_time": "",
-        # "property_type": "",
-        # "property_size": "",
-        # "bedrooms": "",
-        # "additional_features": null,
-        # "heat_pump_installed": "",
-        # "county": "",
-        # "nearest_town": "",
-        # "ber_purpose": "",
-        # "created_at": "2025-01-17T19:17:29.164340Z",
-        # "updated_at": "2025-01-17T19:17:29.169152Z",
-        # "name": "",
-        # "email_address": "",
-        # "mobile_number": ""
 
         return Response(bid_data, status=status.HTTP_200_OK)
 
