@@ -22,6 +22,59 @@ from django.db.models import Count, Q
 
 logger = logging.getLogger(__name__)
 
+       ################ BOOKING PAGE #######################
+
+class GetQuoteView(APIView):
+    authentication_classes = []
+    def get(self, request):
+        """
+        Handle GET request to create a new GetQuote instance with an auto-generated ID.
+        """
+        quote = Quote.objects.create()
+        assessment = Assesment.objects.create(
+            quote=quote,  # Use the primary key of the created Quote as a foreign key
+        )
+
+        # Serialize the Quote data along with the Assessment ID
+        quote_serializer = QuoteSerializer(quote)
+        response_data = {
+            "quote": quote_serializer.data,
+            "assessment_id": assessment.id,
+        }
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+    def put(self, request, pk):
+        """
+        Handle PUT request to update an existing GetQuote instance.
+        """
+        quote = get_object_or_404(Quote, pk=pk)
+        # Pass the updated data from request.data to the serializer
+        serializer = QuoteSerializer(quote, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            # Save the updated Quote instance
+            serializer.save()
+
+            # Create a corresponding Job instance with client set to null
+            Quote.objects.create(
+                building_type='Residential',  # Default value; modify as needed
+                status='Pending',  # Default status
+                preferred_date=quote.preferred_date,
+                preferred_time=quote.preferred_time,
+                property_type=quote.property_type,
+                property_size=quote.property_size,
+                bedrooms=quote.bedrooms,
+                additional_features=quote.additional_features,
+                heat_pump_installed=quote.heat_pump_installed,
+                nearest_town=quote.nearest_town,
+                ber_purpose=quote.ber_purpose,
+            )
+
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 class UserCreateAPIView(APIView):
     permission_classes = [AllowAny]
     def post(self, request, *args, **kwargs):
@@ -30,7 +83,6 @@ class UserCreateAPIView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 
 class UserLoginAPIView(APIView):
@@ -60,6 +112,8 @@ class UserLoginAPIView(APIView):
         # If authentication fails, return an error message
         return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
+
+
 class UpdateUserView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -76,6 +130,53 @@ class UpdateUserView(APIView):
             return Response(UserModelSerializer(user).data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class NotificationListView(APIView):
+    permission_classes = [IsAuthenticated]  # Only authenticated users can view their notifications
+
+    def get(self, request):
+        user = request.user
+
+        # Check if the user is an Accessor or Client
+        try:
+            accessor = Accessor.objects.get(user=user)
+            notifications = Notification.objects.filter(recipient=user).order_by('-created_at')
+        except Accessor.DoesNotExist:
+            try:
+                client = Client.objects.get(user=user)
+                notifications = Notification.objects.filter(recipient=user).order_by('-created_at')
+            except Client.DoesNotExist:
+                return Response({"error": "User is not a client or accessor."},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+        # Serialize the notifications
+        serializer = NotificationSerializer(notifications, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class MarkNotificationAsReadView(APIView):
+    permission_classes = [IsAuthenticated]  # Ensure only authenticated users can access
+
+    def post(self, request, notification_id):
+        user = request.user
+
+        # Find the notification by ID
+        try:
+            notification = Notification.objects.get(id=notification_id, recipient=user)
+        except Notification.DoesNotExist:
+            return Response({"error": "Notification not found or you're not authorized to mark it."},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        # Update the status of the notification to 'read'
+        notification.status = 'read'
+        notification.save()
+
+        return Response({"message": "Notification marked as read."}, status=status.HTTP_200_OK)
+
+
+
+        ############## HOMEOWNER VIEWS ###################         #
+
 class ClientJobListView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -152,39 +253,6 @@ class ClientJobCreateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class AccessorJobView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        # Check if the authenticated user is an Accessor
-        user = request.user
-        if user.user_type != 'accessor':
-            return Response({"error": "You do not have permission to access this endpoint."},
-                            status=status.HTTP_403_FORBIDDEN)
-
-        # Get the preference set by the user
-        preference = user.preference
-        if not preference:
-            return Response({"error": "User preference is not set."},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        # Filter jobs based on the user's preference and 'pending' status
-        jobs = Job.objects.filter(status='pending', county__iexact=preference)  # Case-insensitive match
-        quotes = Quote.objects.filter(status='pending', county__iexact=preference)  # Filter by related job's county
-
-        # Serialize the filtered jobs and quotes
-        job_serializer = JobSerializer(jobs, many=True)
-        quote_serializer = QuoteSerializer(quotes, many=True)
-
-        # Combine the serialized data into one response
-        response_data = {
-            "pending_jobs": job_serializer.data,
-            "pending_quotes": quote_serializer.data,
-        }
-
-        return Response(response_data, status=status.HTTP_200_OK)
-
-
 class JobSearchView(APIView):
     """
     View to search for jobs based on query parameters.
@@ -215,46 +283,6 @@ class JobSearchView(APIView):
         serializer = JobSerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
-class BidCreateView(APIView):
-
-    permission_classes = [IsAuthenticated]  # Ensure only authenticated users can create a bid
-
-    def post(self, request, job_id=None):
-        user = request.user
-
-        try:
-            accessor = Accessor.objects.get(user=user)
-        except Accessor.DoesNotExist:
-            return Response({"error": "User is not an accessor."}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            job = Job.objects.get(id=job_id)
-            if job.status != 'pending':
-                return Response({"error": "Bids can only be placed on jobs with 'Pending' status."},
-                                 status=status.HTTP_400_BAD_REQUEST)
-        except Job.DoesNotExist:
-            return Response({"error": "Job not found."}, status=status.HTTP_404_NOT_FOUND)
-
-        data = request.data.copy()
-        data['assessor'] = accessor.id
-        data['job'] = job.id
-
-        serializer = BidSerializer(data=data)
-        if serializer.is_valid():
-            bid = serializer.save()
-
-            # Create a notification for the client about the new bid
-            notification = Notification.objects.create(
-                message=f"A new bid of {bid.amount} has been placed for your job by {accessor.user.first_name} {accessor.user.last_name}.",
-                notification_type='bid',
-                sender=accessor,
-                recipient=job.client.user,  # Assign the user (UserModel) of the client here
-            )
-
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class JobsAndBidsView(APIView):
     permission_classes = [IsAuthenticated]  # Ensure only authenticated clients can access
@@ -399,6 +427,8 @@ class BidDetailView(APIView):
             return Response(bid_data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class AcceptBidView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -470,6 +500,88 @@ class AcceptBidView(APIView):
 
         except Bid.DoesNotExist:
             return Response({"error": "Bid not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+###################### ################# ################## ####################### #########################
+
+
+                         ########## ACCESSORS SCREEN ##################
+class AccessorJobView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Check if the authenticated user is an Accessor
+        user = request.user
+        if user.user_type != 'accessor':
+            return Response({"error": "You do not have permission to access this endpoint."},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        # Get the preference set by the user
+        preference = user.preference
+        if not preference:
+            return Response({"error": "User preference is not set."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Filter jobs based on the user's preference and 'pending' status
+        jobs = Job.objects.filter(status='pending', county__iexact=preference)  # Case-insensitive match
+        quotes = Quote.objects.filter(status='pending', county__iexact=preference)  # Filter by related job's county
+
+        # Serialize the filtered jobs and quotes
+        job_serializer = JobSerializer(jobs, many=True)
+        quote_serializer = QuoteSerializer(quotes, many=True)
+
+        # Combine the serialized data into one response
+        response_data = {
+            "pending_jobs": job_serializer.data,
+            "pending_quotes": quote_serializer.data,
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+
+class BidCreateView(APIView):
+
+    permission_classes = [IsAuthenticated]  # Ensure only authenticated users can create a bid
+
+    def post(self, request, job_id=None):
+        user = request.user
+
+        try:
+            accessor = Accessor.objects.get(user=user)
+        except Accessor.DoesNotExist:
+            return Response({"error": "User is not an accessor."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            job = Job.objects.get(id=job_id)
+            if job.status != 'pending':
+                return Response({"error": "Bids can only be placed on jobs with 'Pending' status."},
+                                 status=status.HTTP_400_BAD_REQUEST)
+        except Job.DoesNotExist:
+            return Response({"error": "Job not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data.copy()
+        data['assessor'] = accessor.id
+        data['job'] = job.id
+
+        serializer = BidSerializer(data=data)
+        if serializer.is_valid():
+            bid = serializer.save()
+
+            # Create a notification for the client about the new bid
+            notification = Notification.objects.create(
+                message=f"A new bid of {bid.amount} has been placed for your job by {accessor.user.first_name} {accessor.user.last_name}.",
+                notification_type='bid',
+                sender=accessor,
+                recipient=job.client.user,  # Assign the user (UserModel) of the client here
+            )
+
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
 
 class MyBidsView(APIView):
     permission_classes = [IsAuthenticated]  # Only authenticated users can access the view
@@ -554,46 +666,6 @@ class ListAccessorBidsView(APIView):
             })
 
         return Response({"bids": bid_data}, status=status.HTTP_200_OK)
-
-class NotificationListView(APIView):
-    permission_classes = [IsAuthenticated]  # Only authenticated users can view their notifications
-
-    def get(self, request):
-        user = request.user
-
-        # Check if the user is an Accessor or Client
-        try:
-            accessor = Accessor.objects.get(user=user)
-            notifications = Notification.objects.filter(recipient=user).order_by('-created_at')
-        except Accessor.DoesNotExist:
-            try:
-                client = Client.objects.get(user=user)
-                notifications = Notification.objects.filter(recipient=user).order_by('-created_at')
-            except Client.DoesNotExist:
-                return Response({"error": "User is not a client or accessor."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Serialize the notifications
-        serializer = NotificationSerializer(notifications, many=True)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-class MarkNotificationAsReadView(APIView):
-    permission_classes = [IsAuthenticated]  # Ensure only authenticated users can access
-
-    def post(self, request, notification_id):
-        user = request.user
-
-        # Find the notification by ID
-        try:
-            notification = Notification.objects.get(id=notification_id, recipient=user)
-        except Notification.DoesNotExist:
-            return Response({"error": "Notification not found or you're not authorized to mark it."}, status=status.HTTP_404_NOT_FOUND)
-
-        # Update the status of the notification to 'read'
-        notification.status = 'read'
-        notification.save()
-
-        return Response({"message": "Notification marked as read."}, status=status.HTTP_200_OK)
 
 
 
@@ -734,43 +806,6 @@ class AssessmentView(APIView):
 class AssessmentQuoteView(APIView):
     permission_classes = [IsAuthenticated] # Ensure the user is authenticated via Bearer token
 
-    # def put(self, request, assessment_id):
-    #     # Retrieve the Accessor linked to the current user
-    #     try:
-    #         accessor = Accessor.objects.get(user=request.user)
-    #     except Accessor.DoesNotExist:
-    #         return Response({"error": "Accessor not found."}, status=status.HTTP_404_NOT_FOUND)
-    #
-    #     # Fetch the Assessment object
-    #     try:
-    #         assessment = Assesment.objects.get(id=assessment_id)
-    #     except Assesment.DoesNotExist:
-    #         return Response({"error": "Assessment not found."}, status=status.HTTP_404_NOT_FOUND)
-    #
-    #     # Handle quote_id if provided in the request
-    #     quote_id = request.data.get("quote_id")
-    #     if quote_id:
-    #         try:
-    #             quote = Quote.objects.get(id=quote_id)
-    #         except Quote.DoesNotExist:
-    #             return Response({"error": "Quote not found."}, status=status.HTTP_404_NOT_FOUND)
-    #
-    #         # Update the quote with the current accessor
-    #         quote.accessor = accessor
-    #         quote.save()
-    #
-    #         # Link the quote to the assessment
-    #         assessment.quote = quote
-    #         assessment.save()
-    #
-    #     # Update assessment data
-    #     serializer = AssessmentSerializer(assessment, data=request.data, partial=True)
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response(serializer.data, status=status.HTTP_200_OK)
-    #
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
     def put(self, request, assessment_id):
         # Extract accessor_id from the authenticated user
         user = request.user
@@ -838,6 +873,14 @@ class PlaceBidView(APIView):
         )
 
         return Response({"message": "Bid placed successfully.", "bid_id": bid.id}, status=status.HTTP_201_CREATED)
+
+
+
+
+
+                                ######### ADMIN VIEWS ############
+
+
 class TotalAccessorsView(APIView):
     permission_classes = [IsAdminUser]  # Restrict access to admins only
 
@@ -937,65 +980,19 @@ class AdminJobAndQuoteView(APIView):
 
         return Response(data, status=status.HTTP_200_OK)
 
+
+################ NOT USED ########################
 class JobListView(APIView):
     """
     View to list all jobs.
     """
+
     def get(self, request):
         jobs = Job.objects.all()
         serializer = JobSerializer(jobs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-class GetQuoteView(APIView):
-    authentication_classes = []
-    def get(self, request):
-        """
-        Handle GET request to create a new GetQuote instance with an auto-generated ID.
-        """
-        quote = Quote.objects.create()
-        assessment = Assesment.objects.create(
-            quote=quote,  # Use the primary key of the created Quote as a foreign key
-        )
 
-        # Serialize the Quote data along with the Assessment ID
-        quote_serializer = QuoteSerializer(quote)
-        response_data = {
-            "quote": quote_serializer.data,
-            "assessment_id": assessment.id,
-        }
-
-        return Response(response_data, status=status.HTTP_201_CREATED)
-
-    def put(self, request, pk):
-        """
-        Handle PUT request to update an existing GetQuote instance.
-        """
-        quote = get_object_or_404(Quote, pk=pk)
-        # Pass the updated data from request.data to the serializer
-        serializer = QuoteSerializer(quote, data=request.data, partial=True)
-
-        if serializer.is_valid():
-            # Save the updated Quote instance
-            serializer.save()
-
-            # Create a corresponding Job instance with client set to null
-            Quote.objects.create(
-                building_type='Residential',  # Default value; modify as needed
-                status='Pending',  # Default status
-                preferred_date=quote.preferred_date,
-                preferred_time=quote.preferred_time,
-                property_type=quote.property_type,
-                property_size=quote.property_size,
-                bedrooms=quote.bedrooms,
-                additional_features=quote.additional_features,
-                heat_pump_installed=quote.heat_pump_installed,
-                nearest_town=quote.nearest_town,
-                ber_purpose=quote.ber_purpose,
-            )
-
-            return Response(serializer.data, status=status.HTTP_200_OK)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 class FileDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -1087,4 +1084,3 @@ class FileDetailView(APIView):
         # Delete the file
         file.delete()
         return Response({"message": "File deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
-

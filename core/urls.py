@@ -63,13 +63,7 @@ urlpatterns = [
 
     path('assessment/<int:assessment_id>/', AssessmentView.as_view(), name='update-assessment'), ### endpoint to updating the attributs of accesment
 
-    path('all-jobs/', JobListView.as_view(), name='all-jobs'), #### will list all the jobs (need checking) (not being used any where)
-
     path('assess/<int:assessment_id>/', AssessmentQuoteView.as_view(), name='assessment-update'), ##### endpoint for using a quote id to add assesment for get quote ber certificate
-
-    path('projects/<int:project_id>/files/', FileDetailView.as_view(), name='file-upload-list'), ### Optional for uploading files on the relating to the project
-    # POST for file upload, GET for file list
-    path('files/<int:pk>/', FileDetailView.as_view(), name='file-detail'),  ### GET, PUT, DELETE for file details, (not being used anywhere)
 
     path('preference/', UpdateUserView.as_view(), name='update-preference'), ### endpoint for setting the preference
 
@@ -89,6 +83,14 @@ urlpatterns = [
     path('admin/ejobs/', AdminJobAndQuoteView.as_view(), name='admin-job-and-quote'), #lists all the active jobs/quotes with pending status
 
     ##### BER MEMBER VIEW MISSING ######### DONT EXACTLY KNOW WHAT THIS IS ############################
+
+    ################### NOT BEING USED #######################
+
+    path('all-jobs/', JobListView.as_view(), name='all-jobs'), #### will list all the jobs (need checking) (not being used any where)
+
+    path('projects/<int:project_id>/files/', FileDetailView.as_view(), name='file-upload-list'), ### Optional for uploading files on the relating to the project
+    # POST for file upload, GET for file list
+    path('files/<int:pk>/', FileDetailView.as_view(), name='file-detail'),  ### GET, PUT, DELETE for file details, (not being used anywhere)
 
 ]
 
