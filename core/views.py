@@ -347,6 +347,58 @@ class BidDetailView(APIView):
         }
 
         return Response(bid_data, status=status.HTTP_200_OK)
+
+    def put(self, request, bid_id):
+        user = request.user
+
+        try:
+            # Retrieve the bid with the given bid_id
+            bid = Bid.objects.get(id=bid_id)
+        except Bid.DoesNotExist:
+            return Response({"error": "Bid not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check if the user is either the client who posted the job or the assessor who made the bid
+        if bid.job.client.user != user and bid.assessor.user != user:
+            return Response({"error": "You are not authorized to update this bid."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Ensure only the assessor or client can update the bid. You may want to restrict which fields can be updated.
+        # Create a serializer for updating the bid. Use partial=True to allow partial updates.
+        serializer = BidSerializer(bid, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            updated_bid = serializer.save()
+
+            # Optionally, create notifications or perform other actions after the bid is updated.
+            # If the bid amount has changed, create a notification for the client
+            if 'amount' in request.data and request.data['amount'] != str(bid.amount):
+                notification = Notification.objects.create(
+                    message=f"A new bid of {updated_bid.amount} has been placed for your job by {updated_bid.assessor.user.first_name} {updated_bid.assessor.user.last_name}.",
+                    notification_type='bid',
+                    sender=updated_bid.assessor.user,
+                    recipient=updated_bid.job.client.user,  # Assign the user (UserModel) of the client here
+                )
+
+            # Optionally, create notifications or perform other actions after the bid is updated.
+            # Serialize and return the updated bid details
+            bid_data = {
+                "id": updated_bid.id,
+                "amount": updated_bid.amount,
+                "availability": updated_bid.availability,
+                "insurance": updated_bid.insurance,
+                "SEAI_Registered": updated_bid.SEAI_Registered,
+                "VAT_Registered": updated_bid.VAT_Registered,
+                "assessor": {
+                    "id": updated_bid.assessor.id,
+                    "first_name": updated_bid.assessor.first_name,
+                    "last_name": updated_bid.assessor.last_name,
+                    "email": updated_bid.assessor.user.email
+                },
+                "created_at": updated_bid.created_at
+            }
+
+            return Response(bid_data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 class AcceptBidView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -433,21 +485,12 @@ class MyBidsView(APIView):
 
         # Iterate over all the bids and construct the response
         for bid in bids:
-            # Get the project(s) related to the job of the bid
-            projects = Project.objects.filter(job=bid.job)  # Fetch the projects related to the job
-
-            # If there are projects, we can pick the first one (you can modify this logic)
-            project_data = None
-            if projects.exists():
-                project = projects.first()  # You can adjust this as per your requirement
-                project_data = {
-                    "created_at": project.created_at,
-                    "status": project.status,
-                }
+            # Find the lowest bid for the job
             lowest_bid = Bid.objects.filter(job=bid.job).order_by('amount').first()
 
+            # Append the required data for the response
             bid_data.append({
-                "bid_id": bid.id,
+                "bid_id": bid.id,  # Include the bid ID
                 "amount": bid.amount,
                 "availability": bid.availability,  # Include bid availability
                 "job": {
@@ -462,8 +505,7 @@ class MyBidsView(APIView):
                     "ber_purpose": bid.job.ber_purpose,
                     "additional_features": bid.job.additional_features,
                     "preferred_date": bid.job.preferred_date,
-                        "client_id": bid.job.client_id,
-                    "project": project_data,  # Include the project data
+                    "client_id": bid.job.client_id,
                     "lowest_bid": {
                         "bid_id": lowest_bid.id if lowest_bid else None,
                         "amount": lowest_bid.amount if lowest_bid else None,
