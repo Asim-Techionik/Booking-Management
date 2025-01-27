@@ -183,7 +183,7 @@ class Bid(models.Model):
             raise ValidationError(f"Bids cannot be placed on jobs that are {self.job.status}. Only jobs with 'Pending' status can receive bids.")
 
     def __str__(self):
-        return f"Bid {self.id} by {self.assessor.user.email} for Job {self.job.title}"
+        return f"Bid {self.id} by {self.assessor.user.email} for Job {self.job.building_type}"
 
 
 class Notification(models.Model):
@@ -224,7 +224,7 @@ class Project(models.Model):
     accessor = models.ForeignKey(Accessor, on_delete=models.CASCADE, related_name='projects')
 
     def __str__(self):
-        return f"Project for Job: {self.job.title} (Status: {self.status})"
+        return f"Project for Job: {self.job.building_type} (Status: {self.status})"
 
 
 class Quote(models.Model):

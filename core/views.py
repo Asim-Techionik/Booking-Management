@@ -48,28 +48,15 @@ class GetQuoteView(APIView):
         """
         Handle PUT request to update an existing GetQuote instance.
         """
+        # Fetch the existing Quote instance by its primary key
         quote = get_object_or_404(Quote, pk=pk)
+
         # Pass the updated data from request.data to the serializer
         serializer = QuoteSerializer(quote, data=request.data, partial=True)
 
         if serializer.is_valid():
             # Save the updated Quote instance
             serializer.save()
-
-            # Create a corresponding Job instance with client set to null
-            Quote.objects.create(
-                building_type='Residential',  # Default value; modify as needed
-                status='Pending',  # Default status
-                preferred_date=quote.preferred_date,
-                preferred_time=quote.preferred_time,
-                property_type=quote.property_type,
-                property_size=quote.property_size,
-                bedrooms=quote.bedrooms,
-                additional_features=quote.additional_features,
-                heat_pump_installed=quote.heat_pump_installed,
-                nearest_town=quote.nearest_town,
-                ber_purpose=quote.ber_purpose,
-            )
 
             return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -684,9 +671,30 @@ class ProjectListView(APIView):
         # Get all projects related to the accessor (i.e., where the accessor is assigned)
         projects = Project.objects.filter(accessor=accessor)
 
+
         # Prepare project data along with assessment IDs
         project_data = []
         for project in projects:
+            # Fetch the job associated with the project
+            job = project.job  # Assuming `job` is the foreign key in the `Project` model
+
+            # Serialize the job details
+            job_details = {
+                "id": job.id,
+                "created_at": job.created_at,
+                "nearest_town": job.nearest_town,
+                "county": job.county,
+                "bedrooms": job.bedrooms,
+                "heat_pump_installed": job.heat_pump_installed,
+                "building_type": job.building_type,
+                "additional_features": job.additional_features,
+                "purpose": "job.purpose",
+                "status": job.status,
+                "preferred_date": job.preferred_date,
+                "property_type": job.property_type,
+                "property_size": job.property_size,
+            } if job else None
+
             # Retrieve associated assessments for each project
             assessments = Assesment.objects.filter(project=project)
 
@@ -696,6 +704,7 @@ class ProjectListView(APIView):
             # Serialize project and append the assessment IDs
             project_info = ProjectSerializer(project).data
             project_info['assessment_ids'] = list(assessment_ids)
+            project_info['job_details'] = job_details  # Include serialized job details
             project_data.append(project_info)
 
         return Response(project_data, status=status.HTTP_200_OK)
@@ -981,6 +990,41 @@ class AdminJobAndQuoteView(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
 
+class BerMemberView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request, *args, **kwargs):
+        # Annotate data with counts of quotes grouped by name and email
+        quotes_data = (
+            Quote.objects.values("name", "email_address", "county", "status")
+            .annotate(total_quotes=Count("id"))
+            .order_by("name", "email_address")
+        )
+
+        # Prepare the response
+        response_data = []
+        for data in quotes_data:
+            response_data.append({
+                "name": data["name"],
+                "email_address": data["email_address"],
+                "county": data["county"],
+                "status": data["status"],
+                "total_quotes": data["total_quotes"],
+            })
+
+        # Fetch all user IDs
+        # user_ids = list(Quote.objects.values_list("id", flat=True))
+
+        return Response({
+            # "user_ids": user_ids,
+            "user_quotes": response_data,
+        })
+
+
+
+
+
+
 ################ NOT USED ########################
 class JobListView(APIView):
     """
@@ -1084,3 +1128,4 @@ class FileDetailView(APIView):
         # Delete the file
         file.delete()
         return Response({"message": "File deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+

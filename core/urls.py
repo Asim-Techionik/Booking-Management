@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import UserCreateAPIView, UserLoginAPIView, BidCreateView, AcceptBidView, NotificationListView, MarkNotificationAsReadView, ClientJobListView, ClientJobCreateView, BidDetailView
 from .views import GetQuoteView, JobSearchView, ProjectListView, ProjectDetailView, FileDetailView, JobListView, AccessorJobView, JobsAndBidsView, AssessmentView, AssessmentQuoteView, UpdateUserView
-from .views import TotalAccessorsView, TotalClientsView, TotalPendingJobsView, ACDetailsView, ClientDetailView, AdminJobAndQuoteView, ListAccessorBidsView, PlaceBidView, MyBidsView
+from .views import TotalAccessorsView, TotalClientsView, TotalPendingJobsView, ACDetailsView, ClientDetailView, AdminJobAndQuoteView, ListAccessorBidsView, PlaceBidView, MyBidsView, BerMemberView
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -22,7 +22,6 @@ urlpatterns = [
     path('get-quote/<int:pk>/', GetQuoteView.as_view()),  # For PUT request to update an instance
 
 
-
                                             #HOME OWNER SCREEN
     path('client/jobs/', ClientJobListView.as_view(), name='client-job-list'), #list all the jobs made by client
 
@@ -39,8 +38,6 @@ urlpatterns = [
     path('bids/<int:bid_id>/', BidDetailView.as_view(), name='bid-detail'), ##seee the bid details ######(THIS SAME ENDPOINT WILL BE USED FOR REQUOTEING IN THE MY MQUOTES ACCESSIR VIEW USING THE QUOTE ID)
 
     path('bids/<int:bid_id>/accept/', AcceptBidView.as_view(), name='accept-bid'), #send post request to accept bid
-
-
 
 
                                             #ACCESSORS SCREENS
@@ -68,7 +65,6 @@ urlpatterns = [
     path('preference/', UpdateUserView.as_view(), name='update-preference'), ### endpoint for setting the preference
 
 
-
                                             # ADMIN SCREEN
     path('admin/total-accessors/', TotalAccessorsView.as_view(), name='total-accessors'), ### list the total number of accessors
 
@@ -82,7 +78,10 @@ urlpatterns = [
 
     path('admin/ejobs/', AdminJobAndQuoteView.as_view(), name='admin-job-and-quote'), #lists all the active jobs/quotes with pending status
 
-    ##### BER MEMBER VIEW MISSING ######### DONT EXACTLY KNOW WHAT THIS IS ############################
+    ##### Ber Member will list all the the quotes with same email and username ##############
+    path('bermember/', BerMemberView.as_view(), name='ber-member'),
+
+
 
     ################### NOT BEING USED #######################
 
