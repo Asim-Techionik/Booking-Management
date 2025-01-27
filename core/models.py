@@ -179,7 +179,7 @@ class Bid(models.Model):
 
     def clean(self):
         # Ensure the job status is 'Pending'
-        if self.job.status != 'Pending':
+        if self.job.status != 'pending':
             raise ValidationError(f"Bids cannot be placed on jobs that are {self.job.status}. Only jobs with 'Pending' status can receive bids.")
 
     def __str__(self):
@@ -268,22 +268,25 @@ class Quote(models.Model):
     def __str__(self):
         return f"Quote request for {self.property_type} in {self.county}"
 
+class Payment(models.Model):
+    assessor = models.ForeignKey('Accessor', on_delete=models.CASCADE, related_name='payments')
+    job = models.ForeignKey('Job', on_delete=models.CASCADE, related_name='payments')
+    bid = models.ForeignKey('Bid', on_delete=models.CASCADE, related_name='payments')
+    amount = models.PositiveIntegerField()  # Amount in cents (we will auto-generate this)
+    currency = models.CharField(max_length=10, default='usd')
+    stripe_payment_id = models.CharField(max_length=255, unique=True)  # To store Stripe's payment session ID
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
-class File(models.Model):
-    FILE_TYPES = [
-        ('document', 'Document'),
-        ('image', 'Image'),
-        ('video', 'Video'),
-        ('lidar', 'Lidar')
-    ]
-
-    project = models.ForeignKey('Project', on_delete=models.CASCADE, related_name='files')
-    file = models.FileField(upload_to='uploads/%Y/%m/%d/')  # Store files in 'media/uploads/YYYY/MM/DD/'
-    file_type = models.CharField(max_length=50, choices=FILE_TYPES)
-    uploaded_at = models.DateTimeField(default=now)
+    def save(self, *args, **kwargs):
+        if not self.amount:
+            # Set the amount from the related Bid's amount (converted to cents)
+            self.amount = int(self.bid.amount * 100)  # Assuming the bid amount is in dollars
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"File {self.id} - {self.file.name}"
+        return f"Payment of {self.amount} {self.currency} for Job {self.job.building_type}"
+
 
 class Assesment(models.Model):
     quote = models.ForeignKey(Quote, on_delete=models.CASCADE, related_name="assessments", null=True, blank=True)
@@ -1136,3 +1139,22 @@ class Assesment(models.Model):
     class Meta:
         verbose_name = "Property Assessment"
         verbose_name_plural = "Property Assessments"
+
+
+        ########################## NOT USED ############################################
+
+class File(models.Model):
+    FILE_TYPES = [
+        ('document', 'Document'),
+        ('image', 'Image'),
+        ('video', 'Video'),
+        ('lidar', 'Lidar')
+    ]
+
+    project = models.ForeignKey('Project', on_delete=models.CASCADE, related_name='files')
+    file = models.FileField(upload_to='uploads/%Y/%m/%d/')  # Store files in 'media/uploads/YYYY/MM/DD/'
+    file_type = models.CharField(max_length=50, choices=FILE_TYPES)
+    uploaded_at = models.DateTimeField(default=now)
+
+    def __str__(self):
+        return f"File {self.id} - {self.file.name}"

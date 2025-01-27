@@ -1,6 +1,6 @@
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from .models import UserModel, Job, Client, Accessor, Notification, Bid, Project, File, Quote, Assesment
-from .serializers import UserModelSerializer, JobSerializer, BidSerializer, NotificationSerializer, QuoteSerializer, FileSerializer, ProjectSerializer, ClientSerializer, AccessorSerializer, TableJob, AssessmentSerializer
+from .models import UserModel, Job, Client, Accessor, Notification, Bid, Project, File, Quote, Assesment, Payment
+from .serializers import UserModelSerializer, JobSerializer, BidSerializer, NotificationSerializer, QuoteSerializer, FileSerializer, ProjectSerializer, ClientSerializer, AccessorSerializer, TableJob, AssessmentSerializer, PaymentSerializer
 from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -17,7 +17,12 @@ from django.utils.timezone import now
 from rest_framework.authentication import TokenAuthentication
 import logging
 from django.db.models import Count, Q
+from django.conf import settings
+import stripe
+from django.http import JsonResponse
 
+
+stripe.api_key = settings.STRIPE_TEST_SECRET_KEY
 
 
 logger = logging.getLogger(__name__)
@@ -489,6 +494,131 @@ class AcceptBidView(APIView):
             return Response({"error": "Bid not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
+class CreateCheckoutSessionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, bid_id=None, *args, **kwargs):
+        try:
+            # Get the Bid object from the bid_id in the URL
+            bid = Bid.objects.get(id=bid_id)
+
+            # Get the details of the payment associated with the bid
+            payment_details = {
+                'bid_id': bid.id,
+                'job': bid.job.building_type,
+                'assessor': bid.assessor.user.email,
+                'amount': bid.amount,  # Bid amount in dollars
+                'availability': bid.availability,
+                'insurance': bid.insurance,
+                'SEAI_Registered': bid.SEAI_Registered,
+                'VAT_Registered': bid.VAT_Registered,
+            }
+
+            # Return the payment details
+            return Response(payment_details)
+
+        except Bid.DoesNotExist:
+            return Response({'error': 'Bid not found.'}, status=404)
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
+
+    def post(self, request, bid_id=None, *args, **kwargs):
+        # try:
+        #     # Get the Bid object from the bid_id in the URL
+        #     bid = Bid.objects.get(id=bid_id)
+        #
+        #     # Create a Payment record in the database
+        #     payment = Payment.objects.create(
+        #         assessor=bid.assessor,
+        #         job=bid.job,
+        #         bid=bid,
+        #         amount=0,  # Amount will be auto-generated in the model save method
+        #         currency='usd',  # Assuming the currency is USD
+        #
+        #     )
+        #
+        #     # Create a Stripe checkout session
+        #     checkout_session = stripe.checkout.Session.create(
+        #         payment_method_types=['card'],
+        #         line_items=[
+        #             {
+        #                 'price_data': {
+        #                     'currency': 'usd',
+        #                     'product_data': {
+        #                         'name': f"Bid for Job {bid.job.building_type}",
+        #                     },
+        #                     'unit_amount': payment.amount,  # The amount from the Payment model
+        #                 },
+        #                 'quantity': 1,
+        #             },
+        #         ],
+        #         mode='payment',
+        #         success_url='https://example.com/success',  # Placeholder success URL
+        #         cancel_url='https://example.com/cancel',  # Placeholder cancel URL
+        #     )
+        #
+        #     # Update the payment record with the Stripe session ID
+        #     payment.stripe_payment_id = checkout_session.id
+        #     payment.save()
+        #
+        #     # Return status 201 Created with payment and checkout session details
+        #     return Response({
+        #         'status': 'Payment session created successfully',
+        #         'payment_id': payment.id,
+        #         'checkout_session_id': checkout_session.id
+        #     }, status=201)
+        #
+        # except Bid.DoesNotExist:
+        #     return Response({'error': 'Bid not found.'}, status=404)
+        # except Exception as e:
+        #     return Response({'error': str(e)}, status=400)
+
+        try:
+            # Get the Bid object from the bid_id in the URL
+            bid = Bid.objects.get(id=bid_id)
+
+            # Create a Stripe checkout session with required URLs
+            checkout_session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=[
+                    {
+                        'price_data': {
+                            'currency': 'usd',
+                            'product_data': {
+                                'name': f"Bid for Job {bid.job.building_type}",
+                            },
+                            'unit_amount': int(bid.amount * 100),  # Stripe expects amount in cents
+                        },
+                        'quantity': 1,
+                    },
+                ],
+                mode='payment',
+                success_url='https://example.com/success',  # Placeholder success URL
+                cancel_url='https://example.com/cancel',  # Placeholder cancel URL
+            )
+
+            # Create the Payment record in the database after the session is created
+            payment = Payment.objects.create(
+                assessor=bid.assessor,
+                job=bid.job,
+                bid=bid,
+                amount=bid.amount,  # Use the bid amount
+                currency='usd',  # Assuming USD
+                stripe_payment_id=checkout_session.id,  # Use the session ID
+            )
+
+            # Return status 201 Created with payment and checkout session details
+            return Response({
+                'status': 'Payment session created successfully',
+                'payment_id': payment.id,
+                'checkout_session_id': checkout_session.id
+            }, status=201)
+
+        except Bid.DoesNotExist:
+            return Response({'error': 'Bid not found.'}, status=404)
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
+
 ###################### ################# ################## ####################### #########################
 
 
@@ -572,7 +702,6 @@ class BidCreateView(APIView):
 
 class MyBidsView(APIView):
     permission_classes = [IsAuthenticated]  # Only authenticated users can access the view
-########################################################################################################################
     def get(self, request):
         # Retrieve the accessor instance from the logged-in user
         accessor = request.user.accessor
@@ -936,6 +1065,12 @@ class ACDetailsView(APIView):
 
         return Response(client_details, status=status.HTTP_200_OK)
 
+class BMDetailsView(APIView):
+    def get(self, request):
+        # Count the total number of quotes
+        total_quotes = Quote.objects.count()
+
+        return Response({"total_quotes": total_quotes}, status=status.HTTP_200_OK)
 
 class ClientDetailView(RetrieveAPIView):
     permission_classes = [IsAdminUser]  # Restrict access to admins only

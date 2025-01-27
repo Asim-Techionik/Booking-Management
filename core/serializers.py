@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import UserModel, Job, Client, Accessor, Bid, Notification, Project, Quote, File, Assesment
+from .models import UserModel, Job, Client, Accessor, Bid, Notification, Project, Quote, File, Assesment, Payment
 from django.contrib.contenttypes.models import ContentType
 import os
 
@@ -185,6 +185,26 @@ class AssessmentSerializer(serializers.ModelSerializer):
         model = Assesment
         fields = '__all__'
 
+
+class PaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payment
+        fields = [
+            'id',
+            'assessor',
+            'job',
+            'bid',
+            'amount',
+            'currency',
+            'stripe_payment_id',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'amount']  # Amount is set by the save method
+
+    def validate(self, attrs):
+        # Additional validation can be added here if needed
+        return attrs
 
 class FileSerializer(serializers.ModelSerializer):
     class Meta:

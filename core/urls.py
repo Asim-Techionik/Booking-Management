@@ -1,7 +1,7 @@
 from django.urls import path
-from .views import UserCreateAPIView, UserLoginAPIView, BidCreateView, AcceptBidView, NotificationListView, MarkNotificationAsReadView, ClientJobListView, ClientJobCreateView, BidDetailView
+from .views import UserCreateAPIView, UserLoginAPIView, BidCreateView, AcceptBidView, NotificationListView, MarkNotificationAsReadView, ClientJobListView, ClientJobCreateView, BidDetailView, CreateCheckoutSessionView
 from .views import GetQuoteView, JobSearchView, ProjectListView, ProjectDetailView, FileDetailView, JobListView, AccessorJobView, JobsAndBidsView, AssessmentView, AssessmentQuoteView, UpdateUserView
-from .views import TotalAccessorsView, TotalClientsView, TotalPendingJobsView, ACDetailsView, ClientDetailView, AdminJobAndQuoteView, ListAccessorBidsView, PlaceBidView, MyBidsView, BerMemberView
+from .views import TotalAccessorsView, TotalClientsView, TotalPendingJobsView, ACDetailsView, ClientDetailView, AdminJobAndQuoteView, ListAccessorBidsView, PlaceBidView, MyBidsView, BerMemberView, BMDetailsView
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -38,6 +38,8 @@ urlpatterns = [
     path('bids/<int:bid_id>/', BidDetailView.as_view(), name='bid-detail'), ##seee the bid details ######(THIS SAME ENDPOINT WILL BE USED FOR REQUOTEING IN THE MY MQUOTES ACCESSIR VIEW USING THE QUOTE ID)
 
     path('bids/<int:bid_id>/accept/', AcceptBidView.as_view(), name='accept-bid'), #send post request to accept bid
+
+    path('checkout-session/<int:bid_id>/', CreateCheckoutSessionView.as_view(), name = 'checkout-session-create'), # use this endpoint for th
 
 
                                             #ACCESSORS SCREENS
@@ -77,6 +79,8 @@ urlpatterns = [
     path('client/<int:id>/', ClientDetailView.as_view(), name='admin-c-data'), ##### lists the clients individualy
 
     path('admin/ejobs/', AdminJobAndQuoteView.as_view(), name='admin-job-and-quote'), #lists all the active jobs/quotes with pending status
+
+    path('admin/brmembers/', BMDetailsView.as_view(), name='admin-c-data'), #will the list the total number of ber members
 
     ##### Ber Member will list all the the quotes with same email and username ##############
     path('bermember/', BerMemberView.as_view(), name='ber-member'),

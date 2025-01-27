@@ -48,7 +48,8 @@ INSTALLED_APPS = [
     'drf_yasg'
 ]
 
-
+STRIPE_TEST_PUBLIC_KEY = 'pk_test_51Qlts9Rlqfw8USpw5wgBS3uVTud7Cv9jzOkBAl7WCutGgmsT988HzeDqj72cUbThjlGcK08lSfe4sgDHSWfifBRm00G0LnFACK'
+STRIPE_TEST_SECRET_KEY = 'sk_test_51Qlts9Rlqfw8USpwJOWRgsa81kz08DYHrdc1420h1N9tegAHPQZBPZ6o8QjR6hD5AI8CYz7jBmh9cQu0aZ0yIGv000Z2LVWXGs'
 
 # Add Bearer token support
 
