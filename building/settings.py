@@ -28,8 +28,8 @@ SECRET_KEY = 'django-insecure-y=m#v&uz@4b5s!*3_he%nv3^^2@im#f%%))%5q*o&x46ed*mh7
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
-"192.168.1.170"
+ALLOWED_HOSTS = ["*"]
+
 
 # Application definition
 
@@ -53,15 +53,31 @@ STRIPE_TEST_SECRET_KEY = 'sk_test_51Qlts9Rlqfw8USpwJOWRgsa81kz08DYHrdc1420h1N9te
 
 # Add Bearer token support
 
+# SWAGGER_SETTINGS = {
+#     'SECURITY_DEFINITIONS': {
+#         'Bearer': {
+#             'type': 'apiKey',
+#             'name': 'Authorization',
+#             'in': 'header',
+#         },
+#     },
+# }
+
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
         'Bearer': {
             'type': 'apiKey',
-            'name': 'Authorization',
             'in': 'header',
-        },
+            'name': 'Authorization',
+            'description': 'Enter your Bearer token in the format Bearer {token}'
+        }
     },
+    'SECURITY': [
+        {'Bearer': []}
+    ],
 }
+
+
 
 # CORS_ALLOW_ALL_ORIGINS = True
 
@@ -84,10 +100,11 @@ MIDDLEWARE = [
 
 
 CORS_ALLOW_CREDENTIALS = True
+# CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "http://192.168.1.170:5000"
+    "http://127.0.0.1:3000"
 ]
 
 CORS_ALLOW_METHODS = [
@@ -102,10 +119,10 @@ CORS_ALLOW_METHODS = [
 CORS_ALLOW_HEADERS = [
     'content-type',
     'authorization',
-    'x-csrftoken',
-    'accept',
-    'origin',
-    'x-requested-with',
+    # 'x-csrftoken',
+    # 'accept',
+    # 'origin',
+    # 'x-requested-with',
 ]
 
 
@@ -127,9 +144,9 @@ REST_FRAMEWORK = {
         # OR
         'rest_framework_simplejwt.authentication.JWTAuthentication',  # For JWT-based auth
     ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        # 'rest_framework.permissions.IsAuthenticated',
-    ],
+    # 'DEFAULT_PERMISSION_CLASSES': [
+    #     # 'rest_framework.permissions.IsAuthenticated',
+    # ],
 }
 
 
