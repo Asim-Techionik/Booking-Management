@@ -20,6 +20,7 @@ from django.db.models import Count, Q
 from django.conf import settings
 import stripe
 from django.http import JsonResponse
+from drf_yasg.utils import swagger_auto_schema
 
 
 stripe.api_key = settings.STRIPE_TEST_SECRET_KEY
@@ -49,6 +50,7 @@ class GetQuoteView(APIView):
 
         return Response(response_data, status=status.HTTP_201_CREATED)
 
+    @swagger_auto_schema(request_body=QuoteSerializer)
     def put(self, request, pk):
         """
         Handle PUT request to update an existing GetQuote instance.
@@ -69,6 +71,8 @@ class GetQuoteView(APIView):
 
 class UserCreateAPIView(APIView):
     permission_classes = [AllowAny]
+
+    @swagger_auto_schema(request_body=UserModelSerializer)
     def post(self, request, *args, **kwargs):
         serializer = UserModelSerializer(data=request.data)
         if serializer.is_valid():
@@ -80,6 +84,7 @@ class UserCreateAPIView(APIView):
 class UserLoginAPIView(APIView):
     permission_classes = [AllowAny]
 
+    @swagger_auto_schema(request_body=UserModelSerializer)
     def post(self, request, *args, **kwargs):
         """
         Authenticate user and return JWT tokens (access and refresh).
@@ -109,6 +114,7 @@ class UserLoginAPIView(APIView):
 class UpdateUserView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(request_body=UserModelSerializer)
     def put(self, request):
         user = request.user
 
@@ -149,6 +155,7 @@ class NotificationListView(APIView):
 class MarkNotificationAsReadView(APIView):
     permission_classes = [IsAuthenticated]  # Ensure only authenticated users can access
 
+    @swagger_auto_schema(request_body=NotificationSerializer)
     def post(self, request, notification_id):
         user = request.user
 
@@ -187,6 +194,7 @@ class ClientJobListView(APIView):
         serializer = JobSerializer(jobs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @swagger_auto_schema(request_body=JobSerializer)
     def patch(self, request, pk):
         """
         Update the status of a specific job for the authenticated client.
@@ -223,6 +231,7 @@ class ClientJobCreateView(APIView):
         except Client.DoesNotExist:
             return Response({"error": "Client does not exist for the authenticated user."}, status=status.HTTP_400_BAD_REQUEST)
 
+    @swagger_auto_schema(request_body=JobSerializer)
     def put(self, request, job_id):
         """
         Update the attributes of an existing job for the authenticated client using the job_id in the URL.
@@ -368,6 +377,7 @@ class BidDetailView(APIView):
 
         return Response(bid_data, status=status.HTTP_200_OK)
 
+    @swagger_auto_schema(request_body=BidSerializer)
     def put(self, request, bid_id):
         user = request.user
 
@@ -424,6 +434,7 @@ class BidDetailView(APIView):
 class AcceptBidView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(request_body=BidSerializer)
     def post(self, request, bid_id=None):
         user = request.user
 
@@ -523,55 +534,6 @@ class CreateCheckoutSessionView(APIView):
             return Response({'error': str(e)}, status=400)
 
     def post(self, request, bid_id=None, *args, **kwargs):
-        # try:
-        #     # Get the Bid object from the bid_id in the URL
-        #     bid = Bid.objects.get(id=bid_id)
-        #
-        #     # Create a Payment record in the database
-        #     payment = Payment.objects.create(
-        #         assessor=bid.assessor,
-        #         job=bid.job,
-        #         bid=bid,
-        #         amount=0,  # Amount will be auto-generated in the model save method
-        #         currency='usd',  # Assuming the currency is USD
-        #
-        #     )
-        #
-        #     # Create a Stripe checkout session
-        #     checkout_session = stripe.checkout.Session.create(
-        #         payment_method_types=['card'],
-        #         line_items=[
-        #             {
-        #                 'price_data': {
-        #                     'currency': 'usd',
-        #                     'product_data': {
-        #                         'name': f"Bid for Job {bid.job.building_type}",
-        #                     },
-        #                     'unit_amount': payment.amount,  # The amount from the Payment model
-        #                 },
-        #                 'quantity': 1,
-        #             },
-        #         ],
-        #         mode='payment',
-        #         success_url='https://example.com/success',  # Placeholder success URL
-        #         cancel_url='https://example.com/cancel',  # Placeholder cancel URL
-        #     )
-        #
-        #     # Update the payment record with the Stripe session ID
-        #     payment.stripe_payment_id = checkout_session.id
-        #     payment.save()
-        #
-        #     # Return status 201 Created with payment and checkout session details
-        #     return Response({
-        #         'status': 'Payment session created successfully',
-        #         'payment_id': payment.id,
-        #         'checkout_session_id': checkout_session.id
-        #     }, status=201)
-        #
-        # except Bid.DoesNotExist:
-        #     return Response({'error': 'Bid not found.'}, status=404)
-        # except Exception as e:
-        #     return Response({'error': str(e)}, status=400)
 
         try:
             # Get the Bid object from the bid_id in the URL
@@ -660,6 +622,8 @@ class AccessorJobView(APIView):
 class BidCreateView(APIView):
 
     permission_classes = [IsAuthenticated]  # Ensure only authenticated users can create a bid
+
+    @swagger_auto_schema(request_body=BidSerializer)
 
     def post(self, request, job_id=None):
         user = request.user
@@ -842,6 +806,7 @@ class ProjectListView(APIView):
 class ProjectDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(request_body=ProjectSerializer)
     def put(self, request, project_id):
         user = request.user
         project = get_object_or_404(Project, id=project_id)
@@ -918,6 +883,7 @@ class AssessmentView(APIView):
 
         return Response({"assessment_id": assessment.id}, status=status.HTTP_201_CREATED)
 
+    @swagger_auto_schema(request_body=AssessmentSerializer)
     def put(self, request, assessment_id):
         # Ensure the user is an accessor
         try:
@@ -944,6 +910,7 @@ class AssessmentView(APIView):
 class AssessmentQuoteView(APIView):
     permission_classes = [IsAuthenticated] # Ensure the user is authenticated via Bearer token
 
+    @swagger_auto_schema(request_body=AssessmentSerializer)
     def put(self, request, assessment_id):
         # Extract accessor_id from the authenticated user
         user = request.user
@@ -981,6 +948,7 @@ class AssessmentQuoteView(APIView):
 class PlaceBidView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(request_body=BidSerializer)
     def post(self, request, quote_id=None):
         # Ensure the user is an assessor
         try:
@@ -1194,6 +1162,7 @@ class FileDetailView(APIView):
         serializer = FileSerializer(files, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @swagger_auto_schema(request_body=FileSerializer)
     def post(self, request, project_id):
         """
         Upload a new file to a specific project.
@@ -1213,6 +1182,7 @@ class FileDetailView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @swagger_auto_schema(request_body=FileSerializer)
     def put(self, request, pk):
         """
         Update an existing file's details (e.g., file type).
@@ -1240,6 +1210,7 @@ class FileDetailView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @swagger_auto_schema(request_body=FileSerializer)
     def delete(self, request, pk):
         """
         Delete a specific file.
