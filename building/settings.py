@@ -54,7 +54,7 @@ STRIPE_TEST_SECRET_KEY = 'sk_test_51Qlts9Rlqfw8USpwJOWRgsa81kz08DYHrdc1420h1N9te
 # Add Bearer token support
 
 SWAGGER_SETTINGS = {
-    'DEFAULT_GENERATOR_CLASS': 'drf_yasg.generators.OpenAPISchemaGenerator',
+    #'DEFAULT_GENERATOR_CLASS': 'drf_yasg.generators.OpenAPISchemaGenerator',
     'SECURITY_DEFINITIONS': {
         'Bearer': {
             'type': 'apiKey',
