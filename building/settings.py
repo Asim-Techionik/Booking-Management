@@ -28,9 +28,9 @@ SECRET_KEY = 'django-insecure-y=m#v&uz@4b5s!*3_he%nv3^^2@im#f%%))%5q*o&x46ed*mh7
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+ALLOWED_HOSTS = ["*"]
 
-Allow_ALL_HOSTS = True
+ALLOW_ALL_HOSTS = True
 # Application definition
 
 INSTALLED_APPS = [
@@ -53,17 +53,8 @@ STRIPE_TEST_SECRET_KEY = 'sk_test_51Qlts9Rlqfw8USpwJOWRgsa81kz08DYHrdc1420h1N9te
 
 # Add Bearer token support
 
-# SWAGGER_SETTINGS = {
-#     'SECURITY_DEFINITIONS': {
-#         'Bearer': {
-#             'type': 'apiKey',
-#             'name': 'Authorization',
-#             'in': 'header',
-#         },
-#     },
-# }
-
 SWAGGER_SETTINGS = {
+    'DEFAULT_GENERATOR_CLASS': 'drf_yasg.generators.OpenAPISchemaGenerator',
     'SECURITY_DEFINITIONS': {
         'Bearer': {
             'type': 'apiKey',
@@ -86,17 +77,19 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    #'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
 ]
 
-# CSRF_TRUSTED_ORIGINS = [
-#     "http://localhost:3000",
-#     "http://192.168.1.170:5000",
-# ]
+CSRF_TRUSTED_ORIGINS = ['http://localhost:3000']
 # CSRF_COOKIE_SECURE = False
+
+# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# SECURE_SSL_REDIRECT = True
+
 
 
 CORS_ALLOW_CREDENTIALS = True
@@ -125,11 +118,11 @@ CORS_ALLOW_HEADERS = [
     # 'x-requested-with',
 ]
 
-CORS_ALLOWED_CONTENT_TYPES = [
-    'application/json',
-    'application/x-www-form-urlencoded',
-    'multipart/form-data',
-]
+# CORS_ALLOWED_CONTENT_TYPES = [
+#     'application/json',
+#     'application/x-www-form-urlencoded',
+#     'multipart/form-data',
+# ]
 
 DATABASES = {
     'default': {

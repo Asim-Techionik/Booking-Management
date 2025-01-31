@@ -6,3 +6,4 @@ django-cors-headers==4.6.0
 django-rest-swagger==2.2.0
 drf-yasg==1.21.8
 stripe==11.4.1
+daphne==4.1.2

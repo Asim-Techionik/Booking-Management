@@ -39,7 +39,7 @@ urlpatterns = [
 
     path('bids/<int:bid_id>/accept/', AcceptBidView.as_view(), name='accept-bid'), #send post request to accept bid
 
-    path('checkout-session/<int:bid_id>/', CreateCheckoutSessionView.as_view(), name = 'checkout-session-create'), # use this endpoint for th
+    # path('checkout-session/<int:bid_id>/', CreateCheckoutSessionView.as_view(), name = 'checkout-session-create'), # use this endpoint for th
 
 
                                             #ACCESSORS SCREENS
@@ -89,11 +89,11 @@ urlpatterns = [
 
     ################### NOT BEING USED #######################
 
-    path('all-jobs/', JobListView.as_view(), name='all-jobs'), #### will list all the jobs (need checking) (not being used any where)
-
-    path('projects/<int:project_id>/files/', FileDetailView.as_view(), name='file-upload-list'), ### Optional for uploading files on the relating to the project
-    # POST for file upload, GET for file list
-    path('files/<int:pk>/', FileDetailView.as_view(), name='file-detail'),  ### GET, PUT, DELETE for file details, (not being used anywhere)
+    # path('all-jobs/', JobListView.as_view(), name='all-jobs'), #### will list all the jobs (need checking) (not being used any where)
+    #
+    # path('projects/<int:project_id>/files/', FileDetailView.as_view(), name='file-upload-list'), ### Optional for uploading files on the relating to the project
+    # # POST for file upload, GET for file list
+    # path('files/<int:pk>/', FileDetailView.as_view(), name='file-detail'),  ### GET, PUT, DELETE for file details, (not being used anywhere)
 
 ]
 
