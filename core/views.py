@@ -90,10 +90,12 @@ class UserLoginAPIView(APIView):
         Authenticate user and return JWT tokens (access and refresh).
         """
         email = request.data.get('email')  # Change from 'username' to 'email'
+        phone_number = request.data.get('phone_number')
         password = request.data.get('password')
 
         # Authenticate user using Django's built-in authenticate method
         user = authenticate(request, username=email, password=password)  # Pass 'email' as username
+
 
         if user is not None:
             # If authentication is successful, create JWT tokens
