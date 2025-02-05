@@ -105,6 +105,7 @@ class UserLoginAPIView(APIView):
             return Response({
                 'refresh': str(refresh),
                 'access': str(access_token),
+                'user_type': user.user_type,
             }, status=status.HTTP_200_OK)
 
         # If authentication fails, return an error message

@@ -635,7 +635,7 @@ class Assesment(models.Model):
     other_heating_system_s_text = models.CharField(null=True, blank=True, max_length=255)
 
     #GAS_OIL_LPG BOILERS (PRIMAR/SECONDARY)
-    gas_oil_lpg = models.CharField(choices=[('Primary', 'primary'), ('Secondary', 'secondary')])
+    gas_oil_lpg = models.CharField(null=True, blank=True, max_length=255)
     #BOILER TYPE
     standard = models.BooleanField(default=False)
     Combi = models.BooleanField(default=False)
@@ -663,7 +663,7 @@ class Assesment(models.Model):
     gas_oil_manufacturer = models.CharField(blank=True, null=True, max_length=255)
 
     #SOLID FUEL BOILERS
-    solid_fuel_boilers = models.CharField(choices=[('Primary', 'primary'), ('Secondary', 'secondary')])
+    solid_fuel_boilers = models.CharField(blank=True, null=True, max_length=255)
     open_fire_back_boiler = models.BooleanField(default=False)
     closed_room_heater_back_boiler = models.BooleanField(default=False)
     grate = models.CharField(choices=[('Rectangular', 'rectangular'), ('Trapezium', 'trapezium')])
@@ -679,7 +679,7 @@ class Assesment(models.Model):
 
 
     #ELECTRIC BOILERS
-    electric_boilers = models.CharField(choices=[('Primary', 'primary'), ('Secondary', 'secondary')])
+    electric_boilers = models.CharField(blank=True, null=True, max_length=255)
     direct_acting = models.BooleanField(default=False)
     dry_core = models.BooleanField(default=False)
     electric_boilers_cpsu = models.BooleanField(default=False)
@@ -689,7 +689,7 @@ class Assesment(models.Model):
     comments_on_heating_system = models.CharField(blank=True, null=True, max_length=255)
 
     #ELECTRIC STORAGE HEATER
-    electric_storage_heater = models.CharField(choices=[('Primary', 'primary'), ('Secondary', 'secondary')])
+    electric_storage_heater = models.CharField(blank=True, null=True, max_length=255)
     modern_slimeline = models.BooleanField(default=False)
     converter = models.BooleanField(default=False)
     electric_storage_heater_fan_assisted = models.BooleanField(default=False)
@@ -701,7 +701,7 @@ class Assesment(models.Model):
     celect_type = models.BooleanField(default=False)
 
     ##GAS ROOM HEATERS
-    gas_room_heaters = models.CharField(choices=[('Primary', 'primary'), ('Secondary', 'secondary')])
+    gas_room_heaters = models.CharField(blank=True, null=True, max_length=255)
     gas_room_pre_1980 = models.BooleanField(default=False)
     coal_effect_sealed_flue = models.BooleanField(default=False)
     coal_effect_open_to_chimney = models.BooleanField(default=False)
@@ -718,7 +718,7 @@ class Assesment(models.Model):
     flue_type_fan_assisted = models.BooleanField(default=False)
 
     ##WARM AIR SYSTEM
-    warm_air_syetem = models.CharField(choices=[('Primary', 'primary'), ('Secondary', 'secondary')])
+    warm_air_syetem = models.CharField(blank=True, null=True, max_length=255)
     #Ducted or stud Ducted
     ducted_or_stud_ducted_on_off = models.BooleanField(default=False)
     ducted_or_stud_ducted_modulating = models.BooleanField(default=False)
@@ -731,7 +731,7 @@ class Assesment(models.Model):
     electric_electricaire = models.BooleanField(default=False)
 
     ####OIL ROOM HEATERS
-    oil_room_heaters = models.CharField(choices=[('Primary', 'primary'), ('Secondary', 'secondary')])
+    oil_room_heaters = models.CharField(blank=True, null=True, max_length=255)
     room_heater_range = models.BooleanField(default=False)
     room_heater_range_boiler = models.BooleanField(default=False)
     ##AGE
@@ -739,7 +739,7 @@ class Assesment(models.Model):
     oil_room_heaters_2000_later = models.BooleanField(default=False)
 
     ####SOLID FUEL ROOM HEATERS
-    solid_fuel_room_heaters = models.CharField(choices=[('Primary', 'primary'), ('Secondary', 'secondary')])
+    solid_fuel_room_heaters = models.CharField(blank=True, null=True, max_length=255)
     open_fire_in_grate = models.BooleanField(default=False)
     solid_fuel_open_fire_back_boiler = models.BooleanField(default=False)
     closed_room_heater = models.BooleanField(default=False)
@@ -749,7 +749,7 @@ class Assesment(models.Model):
 
 
     ####HEAT PUMP
-    heat_pump = models.CharField(choices=[('Primary', 'primary'), ('Secondary', 'secondary')])
+    heat_pump = models.CharField(blank=True, null=True, max_length=255)
     air_to_air = models.BooleanField(default=False)
     air_to_water = models.BooleanField(default=False)
     gas_fired_ground_watered = models.BooleanField(default=False)
@@ -762,7 +762,7 @@ class Assesment(models.Model):
     heat_pump_manufacturer = models.CharField(blank=True, null=True, max_length=255)
 
     ##ELECTRIC ROOM HEATERS
-    electric_room_heater = models.CharField(choices=[('Primary', 'primary'), ('Secondary', 'secondary')])
+    electric_room_heater = models.CharField(blank=True, null=True, max_length=255)
     panel_converter_radiant_heater = models.BooleanField(default=False)
     fan_heater = models.BooleanField(default=False)
     secondary_heating_manufacturer = models.BooleanField(default=False)
@@ -797,7 +797,7 @@ class Assesment(models.Model):
 
 
     #####HOT WATER CYLINDER, INSULATION, CONTROLS
-    hot_water_cylinder = models.CharField(choices=[('Cylinder', 'cylinder'), ('Combi', 'combi'), ('CPSU', 'cpsu'), ('THERMAL_STORE', 'thermal_store')])
+    hot_water_cylinder = models.CharField(blank=True, null=True, max_length=255)
     no_access = models.BooleanField(default=False)
     Capacity_liters_dimensions = models.CharField(blank=True, null=True, max_length=50)
     no_insulations = models.BooleanField(default=False)
@@ -811,7 +811,7 @@ class Assesment(models.Model):
     storage_is_outdoors = models.BooleanField(default=False)
 
     ############SOLAR WATER HEATING SYSTEM####################################
-    solar_water_haeting = models.CharField(choices=[('YES', 'yes'), ('NO', 'no')])
+    solar_water_haeting = models.CharField(blank=True, null=True, max_length=255)
     evacuated_tube = models.BooleanField(default=False)
     flat_plate_glazed = models.BooleanField(default=False)
     flat_plate_unglazed = models.BooleanField(default=False)
@@ -839,6 +839,46 @@ class Assesment(models.Model):
 
     Comments_on_water_heating = models.CharField(blank=True, null=True, max_length=200)
 
+    #Shower and BATHS#
+
+    shower_dwelling = models.BooleanField(default=False)
+    shower_water_use_target = models.BooleanField(default=False)
+
+    shower_1_flow_rate_known = models.CharField(blank=True, null=True, max_length=100)
+    shower_1_type = models.CharField(blank=True, null=True, max_length=100)
+    shower_1_flow_restrictor = models.CharField(blank=True, null=True, max_length=100)
+    Shower_1_flow_rate = models.CharField(blank=True, null=True, max_length=100)
+    Shower_1_whhr_1 = models.CharField(blank=True, null=True, max_length=100)
+    Shower_1_whhr_2 = models.CharField(blank=True, null=True, max_length=100)
+
+    shower_2_flow_rate_known = models.CharField(blank=True, null=True, max_length=100)
+    shower_2_type = models.CharField(blank=True, null=True, max_length=100)
+    shower_2_flow_restrictor = models.CharField(blank=True, null=True, max_length=100)
+    Shower_2_flow_rate = models.CharField(blank=True, null=True, max_length=100)
+    Shower_2_whhr_1 = models.CharField(blank=True, null=True, max_length=100)
+    Shower_2_whhr_2 = models.CharField(blank=True, null=True, max_length=100)
+
+    shower_3_flow_rate_known = models.CharField(blank=True, null=True, max_length=100)
+    shower_3_type = models.CharField(blank=True, null=True, max_length=100)
+    shower_3_flow_restrictor = models.CharField(blank=True, null=True, max_length=100)
+    Shower_3_flow_rate = models.CharField(blank=True, null=True, max_length=100)
+    Shower_3_whhr_1 = models.CharField(blank=True, null=True, max_length=100)
+    Shower_3_whhr_2 = models.CharField(blank=True, null=True, max_length=100)
+
+    shower_4_flow_rate_known = models.CharField(blank=True, null=True, max_length=100)
+    shower_4_type = models.CharField(blank=True, null=True, max_length=100)
+    shower_4_flow_restrictor = models.CharField(blank=True, null=True, max_length=100)
+    Shower_4_flow_rate = models.CharField(blank=True, null=True, max_length=100)
+    Shower_4_whhr_1 = models.CharField(blank=True, null=True, max_length=100)
+    Shower_4_whhr_2 = models.CharField(blank=True, null=True, max_length=100)
+
+    shower_5_flow_rate_known = models.CharField(blank=True, null=True, max_length=100)
+    shower_5_type = models.CharField(blank=True, null=True, max_length=100)
+    shower_5_flow_restrictor = models.CharField(blank=True, null=True, max_length=100)
+    Shower_5_flow_rate = models.CharField(blank=True, null=True, max_length=100)
+    Shower_5_whhr_1 = models.CharField(blank=True, null=True, max_length=100)
+    Shower_5_whhr_2 = models.CharField(blank=True, null=True, max_length=100)
+    ###################### Page 5 ################################
 
     #HEATING CONTROL #####
     no_controls = models.BooleanField(default=False)

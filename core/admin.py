@@ -16,7 +16,7 @@ class CustomUserAdmin(UserAdmin):
         ('Important Dates', {'fields': ('last_login', 'date_joined')}),
     )
 
-    # Fields displayed when adding a new user
+    # Fields displayed when adding a new userA
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
