@@ -32,6 +32,7 @@ services:
     command: python manage.py runserver 0.0.0.0:8000 # ["./wait-for-it.sh", "db:5432", "--", "daphne", "-p", "8000", "-b", "0.0.0.0", "building.asgi:application"] #
     volumes:
       - .:/app
+      - ./gmail:/app/gmail  # ✅ Mount OAuth2 credentials
     ports:
       - "8000:8000"
     depends_on:
@@ -40,6 +41,8 @@ services:
       - your_network
     environment:
      - DB_HOST=db
+     - CLIENT_SECRET_FILE=/app/gmail/client_secret.json
+     - TOKEN_PATH=/app/gmail/token.json
 networks:
   your_network:
     driver: bridge

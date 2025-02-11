@@ -7,3 +7,7 @@ django-rest-swagger==2.2.0
 drf-yasg==1.21.8
 stripe==11.4.1
 daphne==4.1.2
+google-auth==2.38.0
+google-auth-oauthlib==1.2.1
+google-auth-httplib2==0.2.0
+google-api-python-client==2.121.0  # ✅ Required for Gmail API
