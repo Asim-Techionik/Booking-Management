@@ -7,21 +7,22 @@ import os
 
 class UserModelSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    accessor_token = serializers.UUIDField(read_only=True)  # Make it read-only
 
     class Meta:
         model = UserModel
-        fields = ['id', 'email', 'first_name', 'last_name', 'phone_number', 'password', 'user_type', 'preference', 'is_staff', 'is_superuser', 'date_joined']
+        fields = ['id', 'email', 'first_name', 'last_name', 'phone_number', 'password', 'user_type', 'accessor_token', 'preference', 'is_staff', 'is_superuser', 'date_joined']
         read_only_fields = ['id', 'date_joined']
 
     def validate(self, attrs):
-        if 'user_type' in attrs and attrs.get('user_type') not in ['client', 'accessor']:
+        if 'user_type' in attrs and attrs.get('user_type') not in ['client', 'accessor', 'admin']:
             raise serializers.ValidationError({"user_type": "Invalid user type. Must be 'client' or 'accessor'."})
 
-        if attrs.get('is_staff') and attrs.get('user_type') != 'accessor':
-            raise serializers.ValidationError({"is_staff": "Only 'accessor' can be an admin."})
+        if attrs.get('is_staff') and attrs.get('user_type') != 'admin':
+            raise serializers.ValidationError({"is_staff": "Only 'admin' can be an admin."})
 
-        if attrs.get('is_superuser') and attrs.get('user_type') != 'accessor':
-            raise serializers.ValidationError({"is_superuser": "Only 'accessor' can be a superuser."})
+        if attrs.get('is_superuser') and attrs.get('user_type') != 'admin':
+            raise serializers.ValidationError({"is_superuser": "Only 'admin' can be a superuser."})
         return attrs
 
     def create(self, validated_data):

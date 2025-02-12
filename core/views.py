@@ -21,6 +21,19 @@ from django.conf import settings
 import stripe
 from django.http import JsonResponse
 from drf_yasg.utils import swagger_auto_schema
+from django.http import HttpResponse
+from core.email_backend import send_gmail_api
+from django.contrib.auth.hashers import make_password
+import random
+from datetime import timedelta
+
+
+
+
+
+
+
+
 
 stripe.api_key = settings.STRIPE_TEST_SECRET_KEY
 
@@ -88,29 +101,102 @@ class UserLoginAPIView(APIView):
         """
         Authenticate user and return JWT tokens (access and refresh).
         """
-        email = request.data.get('email')  # Change from 'username' to 'email'
+        email = request.data.get('email')
         phone_number = request.data.get('phone_number')
         password = request.data.get('password')
 
-        # Authenticate user using Django's built-in authenticate method
-        user = authenticate(request, username=email, password=password)  # Pass 'email' as username
+        # Ensure that both email and phone number are provided for 'client' users
+        if not email or (UserModel.objects.filter(email=email).exists() and
+                         UserModel.objects.get(email=email).user_type == 'client' and not phone_number):
+            return Response({"detail": "For client users, both email and phone number are required."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Authenticate client users without checking the password
+        if UserModel.objects.filter(email=email, phone_number=phone_number).exists():
+            user = UserModel.objects.get(email=email, phone_number=phone_number)
+            if user.user_type == 'client':
+                # No password check for client users
+                refresh = RefreshToken.for_user(user)
+                access_token = refresh.access_token
+
+                # Return both tokens for client user
+                return Response({
+                    'refresh': str(refresh),
+                    'access': str(access_token),
+                    'user_type': user.user_type,
+                }, status=status.HTTP_200_OK)
+
+        # If it's not a client or the combination of email and phone number doesn't match, attempt regular authentication
+        user = authenticate(request, username=email, password=password)
+
+        if user is None:
+            return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # If authentication is successful, create JWT tokens
+        refresh = RefreshToken.for_user(user)
+        access_token = refresh.access_token
+
+        # Return both tokens
+        return Response({
+            'refresh': str(refresh),
+            'access': str(access_token),
+            'user_type': user.user_type,
+        }, status=status.HTTP_200_OK)
 
 
-        if user is not None:
-            # If authentication is successful, create JWT tokens
-            refresh = RefreshToken.for_user(user)
-            access_token = refresh.access_token
 
-            # Return both tokens
-            return Response({
-                'refresh': str(refresh),
-                'access': str(access_token),
-                'user_type': user.user_type,
-            }, status=status.HTTP_200_OK)
-
-        # If authentication fails, return an error message
-        return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
-
+# class UserLoginAPIView(APIView):
+#     permission_classes = [AllowAny]
+#
+#     @swagger_auto_schema(request_body=UserModelSerializer)
+#     def post(self, request, *args, **kwargs):
+#         """
+#         Authenticate user and return JWT tokens (access and refresh).
+#         """
+#         email = request.data.get('email')
+#         phone_number = request.data.get('phone_number')
+#         password = request.data.get('password')
+#
+#         # Ensure that both email and phone number are provided for 'client' users
+#         if not email or (UserModel.objects.filter(email=email).exists() and UserModel.objects.get(email=email).user_type == 'client' and not phone_number):
+#             return Response({"detail": "For client users, both email and phone number are required."},
+#                             status=status.HTTP_400_BAD_REQUEST)
+#
+#         # Authenticate client users without checking the password
+#         if UserModel.objects.filter(email=email, phone_number=phone_number).exists():
+#             user = UserModel.objects.get(email=email, phone_number=phone_number)
+#             if user.user_type == 'client':
+#                 # No password check for client users
+#                 refresh = RefreshToken.for_user(user)
+#                 access_token = refresh.access_token
+#
+#                 # Return both tokens for client user
+#                 return Response({
+#                     'refresh': str(refresh),
+#                     'access': str(access_token),
+#                     'user_type': user.user_type,
+#                 }, status=status.HTTP_200_OK)
+#
+#         # If it's not a client or the combination of email and phone number doesn't match, attempt regular authentication
+#         user = authenticate(request, email=email, password=password)
+#
+#         if user is None:
+#             return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+#
+#         # Check is_active status only for 'accessor' users
+#         if user.user_type == 'accessor' and not user.is_active:
+#             return Response({"detail": "Account is not activated. Please activate your account first."}, status=status.HTTP_403_FORBIDDEN)
+#
+#         # If authentication is successful, create JWT tokens
+#         refresh = RefreshToken.for_user(user)
+#         access_token = refresh.access_token
+#
+#         # Return both tokens
+#         return Response({
+#             'refresh': str(refresh),
+#             'access': str(access_token),
+#             'user_type': user.user_type,
+#         }, status=status.HTTP_200_OK)
 
 
 class UpdateUserView(APIView):
@@ -1095,37 +1181,156 @@ class AdminJobAndQuoteView(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
 
+# class BerMemberView(APIView):
+#     permission_classes = [IsAdminUser]
+#
+#     def get(self, request, *args, **kwargs):
+#         # Annotate data with counts of quotes grouped by name and email
+#         quotes_data = (
+#             Quote.objects.values("name", "email_address", "county", "status")
+#             .annotate(total_quotes=Count("id"))
+#             .order_by("name", "email_address")
+#         )
+#
+#         # Prepare the response
+#         response_data = []
+#         for data in quotes_data:
+#             response_data.append({
+#                 "name": data["name"],
+#                 "email_address": data["email_address"],
+#                 "county": data["county"],
+#                 "status": data["status"],
+#                 "total_quotes": data["total_quotes"],
+#             })
+#
+#         # Fetch all user IDs
+#         # user_ids = list(Quote.objects.values_list("id", flat=True))
+#
+#         return Response({
+#             # "user_ids": user_ids,
+#             "user_quotes": response_data,
+#         })
+
 class BerMemberView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request, *args, **kwargs):
-        # Annotate data with counts of quotes grouped by name and email
-        quotes_data = (
-            Quote.objects.values("name", "email_address", "county", "status")
-            .annotate(total_quotes=Count("id"))
-            .order_by("name", "email_address")
+        # Annotate data with counts of projects grouped by accessor
+        accessor_data = (
+            Accessor.objects.values("id", "user__first_name", "user__last_name", "user__email", "user__is_active")
+            .annotate(total_projects=Count("projects"))
+            .order_by("user__first_name", "user__last_name")
         )
 
         # Prepare the response
         response_data = []
-        for data in quotes_data:
+        for data in accessor_data:
             response_data.append({
-                "name": data["name"],
-                "email_address": data["email_address"],
-                "county": data["county"],
-                "status": data["status"],
-                "total_quotes": data["total_quotes"],
+                "name": f"{data['user__first_name']} {data['user__last_name']}",
+                "email": data["user__email"],
+                "total_projects": data["total_projects"],
+                "is_active": data["user__is_active"],
             })
 
-        # Fetch all user IDs
-        # user_ids = list(Quote.objects.values_list("id", flat=True))
-
         return Response({
-            # "user_ids": user_ids,
-            "user_quotes": response_data,
+            "accessor_details": response_data,
         })
 
 
+        ################################# Email NOTIFICATIONS ###########################
+
+
+####### view to send post request on activation url###################
+# class ActivateAccessorAPIView(APIView):
+#     """ Activates an accessor account when a valid token is provided via POST. """
+#
+#     def post(self, request, token, *args, **kwargs):
+#         user = get_object_or_404(UserModel, accessor_token=token, user_type='accessor')
+#
+#         if user.is_active:
+#             return Response({"message": "User is already active."}, status=status.HTTP_400_BAD_REQUEST)
+#
+#         user.is_active = True
+#         user.save(update_fields=['is_active'])
+#
+#         return Response({"message": "Account activated successfully."}, status=status.HTTP_200_OK)
+
+
+class ActivateAccessorAPIView(APIView):
+    """Activates an accessor account when a valid token is provided via POST."""
+
+    def get(self, request, token, *args, **kwargs):
+        """Auto-submit a POST request using JavaScript when the user visits the link."""
+        html_response = f"""
+        <html>
+            <body>
+                <script>
+                    fetch("{request.build_absolute_uri()}", {{
+                        method: "POST"
+                    }}).then(response => response.json())
+                    .then(data => {{
+                        alert(data.message);
+                    }})
+                    .catch(error => console.error("Error:", error));
+                </script>
+                <p>Activating your account...</p>
+            </body>
+        </html>
+        """
+        return HttpResponse(html_response)
+
+    def post(self, request, token, *args, **kwargs):
+        """Activate the account when a POST request is made."""
+        user = get_object_or_404(UserModel, accessor_token=token, user_type='accessor')
+
+        if user.is_active:
+            return Response({"message": "User is already active."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.is_active = True
+        user.save(update_fields=['is_active'])
+
+        return Response({"message": "Account activated successfully."}, status=status.HTTP_200_OK)
+
+
+class ForgotPasswordRequestAPIView(APIView):
+    """
+    Endpoint where accessors and admins can request a password reset.
+    A 4-digit PIN is generated and stored in the user model.
+    """
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email')
+        user = get_object_or_404(UserModel, email=email, user_type__in=['accessor', 'admin'])
+
+        # Generate a 4-digit PIN
+        pin = str(random.randint(1000, 9999))
+        user.pin = pin
+        user.pin_created_at = now()
+        user.save(update_fields=['pin', 'pin_created_at'])
+
+        return Response({"message": "A PIN has been generated and will be sent to your email.", "email": user.email}, status=status.HTTP_200_OK)
+
+
+class ResetPasswordAPIView(APIView):
+    """
+    Endpoint where users submit the PIN and new password to reset their account.
+    """
+
+    def post(self, request, *args, **kwargs):
+        pin = request.data.get('pin')
+        new_password = request.data.get('new_password')
+
+        user = get_object_or_404(UserModel, pin=pin, user_type__in=['accessor', 'admin'])
+
+        # Check if the PIN is still valid (created less than 2 minutes ago)
+        if user.pin_created_at and now() - user.pin_created_at > timedelta(minutes=2):
+            return Response({"message": "PIN has expired."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Reset password and clear PIN
+        user.password = make_password(new_password)
+        user.pin = None
+        user.save(update_fields=['password', 'pin'])
+
+        return Response({"message": "Password has been successfully reset."}, status=status.HTTP_200_OK)
 
 
 

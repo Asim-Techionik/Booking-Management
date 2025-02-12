@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 # from torch.fx.experimental.symbolic_shapes import definitely_false
+import uuid
 
 
 class UserModelManager(BaseUserManager):
@@ -18,9 +19,34 @@ class UserModelManager(BaseUserManager):
         if not email:
             raise ValueError('The Email field must be set')
         email = self.normalize_email(email)
-        user = self.model(email=email, first_name=first_name, last_name=last_name, phone_number=phone_number, is_staff=is_staff, is_superuser=is_superuser, user_type=user_type, **extra_fields)
+
+        # Set is_active based on user_type
+        is_active = False if user_type == 'accessor' else True
+
+        # Ensure accessor users have a unique token
+        accessor_token = uuid.uuid4() if user_type == 'accessor' else None
+        activation_url = None
+
+        user = self.model(
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            phone_number=phone_number,
+            is_staff=is_staff,
+            is_superuser=is_superuser,
+            user_type=user_type,
+            is_active=is_active,
+            accessor_token=accessor_token,
+            activation_url=activation_url,
+            **extra_fields
+        )
         user.set_password(password)  # Hash the password
         user.save(using=self._db)
+
+        # Generate activation URL for accessor users
+        if user_type == 'accessor' and accessor_token:
+            user.activation_url = f"http://localhost:8000/api/activate/{accessor_token}/"
+            user.save(update_fields=['activation_url'])
 
         # Automatically create Client or Accessor entry
         if user_type == 'client':
@@ -49,13 +75,14 @@ class UserModelManager(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
 
-        return self.create_user(email, first_name, last_name, phone_number, password, user_type='accessor', **extra_fields)
+        return self.create_user(email, first_name, last_name, phone_number, password, user_type='admin', **extra_fields)
 
 
 class UserModel(AbstractBaseUser, PermissionsMixin):
     USER_TYPE_CHOICES = (
         ('client', 'Client'),
         ('accessor', 'Accessor'),
+        ('admin', 'Admin')
     )
 
     email = models.EmailField(unique=True)
@@ -68,10 +95,13 @@ class UserModel(AbstractBaseUser, PermissionsMixin):
     password = models.CharField(max_length=255)
     user_type = models.CharField(max_length=255, choices=USER_TYPE_CHOICES, default='client')
     date_joined = models.DateTimeField(default=timezone.now)
+    accessor_token = models.UUIDField(unique=True, blank=True, null=True)  # Token for accessor users
     is_active = models.BooleanField(default=True)
+    activation_url = models.URLField(max_length=512, blank=True, null=True)  # Store activation URL
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
-
+    pin = models.CharField(max_length=4, blank=True, null=True)  # PIN for password reset
+    pin_created_at = models.DateTimeField(blank=True, null=True)
     preference = models.CharField(max_length=255, blank=True, null=True)
     home_county = models.CharField(max_length=255, blank=True, null=True)
     SEAI_registration = models.CharField(max_length=255, blank=True, null=True)
@@ -93,6 +123,13 @@ class UserModel(AbstractBaseUser, PermissionsMixin):
     def save(self, *args, **kwargs):
         if self.password and not self.password.startswith('pbkdf2_sha256$'):
             self.password = make_password(self.password)
+
+        # Ensure accessor users have a unique token and activation URL
+        if self.user_type == 'accessor':
+            if not self.accessor_token:
+                self.accessor_token = uuid.uuid4()
+            self.activation_url = f"http://localhost:8000/api/activate/{self.accessor_token}/"
+
         super().save(*args, **kwargs)
 
     def __str__(self):

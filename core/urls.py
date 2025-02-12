@@ -2,6 +2,7 @@ from django.urls import path
 from .views import UserCreateAPIView, UserLoginAPIView, BidCreateView, AcceptBidView, NotificationListView, MarkNotificationAsReadView, ClientJobListView, ClientJobCreateView, BidDetailView, CreateCheckoutSessionView
 from .views import GetQuoteView, JobSearchView, ProjectListView, ProjectDetailView, FileDetailView, JobListView, AccessorJobView, JobsAndBidsView, AssessmentView, AssessmentQuoteView, UpdateUserView
 from .views import TotalAccessorsView, TotalClientsView, TotalPendingJobsView, ACDetailsView, ClientDetailView, AdminJobAndQuoteView, ListAccessorBidsView, PlaceBidView, MyBidsView, BerMemberView, BMDetailsView
+from .views import ActivateAccessorAPIView, ResetPasswordAPIView, ForgotPasswordRequestAPIView
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -85,7 +86,10 @@ urlpatterns = [
     ##### Ber Member will list all the the quotes with same email and username ##############
     path('bermember/', BerMemberView.as_view(), name='ber-member'),
 
-
+###################### Email Notifications #######################
+    path('activate/<uuid:token>/', ActivateAccessorAPIView.as_view(), name='activate_accessor'),
+    path('forgot-password/', ForgotPasswordRequestAPIView.as_view(), name='forgot_password_request'),
+    path('reset-password/', ResetPasswordAPIView.as_view(), name='reset_password'),
 
     ################### NOT BEING USED #######################
 
