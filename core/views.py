@@ -26,7 +26,7 @@ from core.email_backend import send_gmail_api
 from django.contrib.auth.hashers import make_password
 import random
 from datetime import timedelta
-
+import uuid
 
 
 
@@ -63,19 +63,87 @@ class GetQuoteView(APIView):
         return Response(response_data, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(request_body=QuoteSerializer)
+    # def put(self, request, pk):
+    #     """
+    #     Handle PUT request to update an existing GetQuote instance.
+    #     """
+    #     # Fetch the existing Quote instance by its primary key
+    #     quote = get_object_or_404(Quote, pk=pk)
+    #
+    #     # Pass the updated data from request.data to the serializer
+    #     serializer = QuoteSerializer(quote, data=request.data, partial=True)
+    #
+    #     if serializer.is_valid():
+    #         # Save the updated Quote instance
+    #         serializer.save()
+    #
+    #         return Response(serializer.data, status=status.HTTP_200_OK)
+    #
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     def put(self, request, pk):
         """
-        Handle PUT request to update an existing GetQuote instance.
+        Update the Quote instance and create a user and job if all attributes except lidar are provided.
         """
-        # Fetch the existing Quote instance by its primary key
         quote = get_object_or_404(Quote, pk=pk)
 
-        # Pass the updated data from request.data to the serializer
         serializer = QuoteSerializer(quote, data=request.data, partial=True)
-
         if serializer.is_valid():
-            # Save the updated Quote instance
             serializer.save()
+
+            # Check if all required attributes except lidar are filled
+            required_fields = [
+                'name', 'email_address', 'mobile_number',
+                'building_type', 'preferred_date', 'preferred_time',
+                'property_type', 'property_size', 'bedrooms',
+                'heat_pump_installed', 'county', 'nearest_town', 'ber_purpose'
+            ]
+
+            if all(getattr(quote, field) for field in required_fields):
+                # Update or create UserModel with user_type explicitly set to 'client'
+                email = quote.email_address
+                user, created = UserModel.objects.get_or_create(
+                    email=email,
+                    defaults={
+                        "first_name": quote.name.split()[0] if quote.name else "",
+                        "last_name": quote.name.split()[1] if quote.name and len(quote.name.split()) > 1 else "",
+                        "phone_number": quote.mobile_number,
+                        "password": str(uuid.uuid4())[:8],
+                        "user_type": "client"  # Ensure user_type is client
+                    }
+                )
+
+                # Ensure the Client instance exists and is linked to the user
+                client, client_created = Client.objects.get_or_create(
+                    user=user,
+                    defaults={
+                        "email": email,
+                        "phone_number": quote.mobile_number,
+                        "first_name": user.first_name,
+                        "last_name": user.last_name
+                    }
+                )
+
+                # Update or create Job linked to the correct Client
+                job, job_created = Job.objects.update_or_create(
+                    client=client,
+                    defaults={
+                        "building_type": quote.building_type,
+                        "preferred_date": quote.preferred_date,
+                        "preferred_time": quote.preferred_time,
+                        "property_type": quote.property_type,
+                        "property_size": quote.property_size,
+                        "bedrooms": quote.bedrooms,
+                        "additional_features": quote.additional_features,
+                        "heat_pump_installed": quote.heat_pump_installed,
+                        "county": quote.county,
+                        "nearest_town": quote.nearest_town,
+                        "ber_purpose": quote.ber_purpose,
+                        "name": quote.name,
+                        "email_address": quote.email_address,
+                        "mobile_number": quote.mobile_number,
+                        "status": "pending"
+                    }
+                )
 
             return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -1180,36 +1248,6 @@ class AdminJobAndQuoteView(APIView):
 
         return Response(data, status=status.HTTP_200_OK)
 
-
-# class BerMemberView(APIView):
-#     permission_classes = [IsAdminUser]
-#
-#     def get(self, request, *args, **kwargs):
-#         # Annotate data with counts of quotes grouped by name and email
-#         quotes_data = (
-#             Quote.objects.values("name", "email_address", "county", "status")
-#             .annotate(total_quotes=Count("id"))
-#             .order_by("name", "email_address")
-#         )
-#
-#         # Prepare the response
-#         response_data = []
-#         for data in quotes_data:
-#             response_data.append({
-#                 "name": data["name"],
-#                 "email_address": data["email_address"],
-#                 "county": data["county"],
-#                 "status": data["status"],
-#                 "total_quotes": data["total_quotes"],
-#             })
-#
-#         # Fetch all user IDs
-#         # user_ids = list(Quote.objects.values_list("id", flat=True))
-#
-#         return Response({
-#             # "user_ids": user_ids,
-#             "user_quotes": response_data,
-#         })
 
 class BerMemberView(APIView):
     permission_classes = [IsAdminUser]
