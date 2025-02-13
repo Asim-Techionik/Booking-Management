@@ -759,16 +759,13 @@ class AccessorJobView(APIView):
 
         # Filter jobs based on the user's preference and 'pending' status
         jobs = Job.objects.filter(status='pending', county__iexact=preference)  # Case-insensitive match
-        quotes = Quote.objects.filter(status='pending', county__iexact=preference)  # Filter by related job's county
 
         # Serialize the filtered jobs and quotes
         job_serializer = JobSerializer(jobs, many=True)
-        quote_serializer = QuoteSerializer(quotes, many=True)
 
         # Combine the serialized data into one response
         response_data = {
             "pending_jobs": job_serializer.data,
-            "pending_quotes": quote_serializer.data,
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
