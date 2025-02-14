@@ -64,6 +64,8 @@ from django.contrib.contenttypes.models import ContentType
 import logging
 from .models import UserModel, Notification
 from core.email_backend import send_gmail_api  # Assuming send_gmail_api is a function to send emails
+import random
+
 
 logger = logging.getLogger(__name__)
 
