@@ -96,22 +96,49 @@ def handle_accessor_signup(sender, instance, created, **kwargs):
         for admin in settings.ADMINS:
             admin_email = admin[1]
             subject = f"New Accessor Waiting for Approval: {instance.first_name} {instance.last_name}"
+            # message = f"""
+            # Hello Admin,
+            #
+            # A new accessor has signed up and is waiting for approval. Please review their details:
+            #
+            # Name: {instance.first_name} {instance.last_name}
+            # Email: {instance.email}
+            # Phone: {instance.phone_number}
+            #
+            # Activation URL: {instance.activation_url}
+            #
+            # Please approve or reject their application.
+            #
+            # Best regards,
+            # Your System
+            # """
             message = f"""
-            Hello Admin,
+                        <html>
+                            <body>
+                                <h2 style="color: #333; font-family: Arial, sans-serif;">New Accessor Waiting for Approval</h2>
+                                <p>Hello Admin,</p>
+                                <p>A new accessor has signed up and is waiting for approval. Please review their details:</p>
+                                <table style="border-collapse: collapse; width: 100%; margin-top: 20px;">
+                                    <tr>
+                                        <td style="border: 1px solid #ddd; padding: 8px; background-color: #f9f9f9; width: 30%;">Name</td>
+                                        <td style="border: 1px solid #ddd; padding: 8px;">{instance.first_name} {instance.last_name}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="border: 1px solid #ddd; padding: 8px; background-color: #f9f9f9;">Email</td>
+                                        <td style="border: 1px solid #ddd; padding: 8px;">{instance.email}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="border: 1px solid #ddd; padding: 8px; background-color: #f9f9f9;">Phone</td>
+                                        <td style="border: 1px solid #ddd; padding: 8px;">{instance.phone_number}</td>
+                                    </tr>
+                                </table>
+                                <p style="margin-top: 20px;">Activation URL: <a href="{instance.activation_url}" style="color: #007bff;">Click here to approve</a></p>
+                                <p>Please approve or reject their application.</p>
+                                <p>Best regards,<br>Your System</p>
+                            </body>
+                        </html>
+                        """
 
-            A new accessor has signed up and is waiting for approval. Please review their details:
-
-            Name: {instance.first_name} {instance.last_name}
-            Email: {instance.email}
-            Phone: {instance.phone_number}
-
-            Activation URL: {instance.activation_url}
-
-            Please approve or reject their application.
-
-            Best regards,
-            Your System
-            """
             logger.info(f"📨 Sending email to {admin_email}")
             send_gmail_api(subject, message, admin_email)
             logger.info(f"✅ Email sent to {admin_email}")
@@ -119,16 +146,29 @@ def handle_accessor_signup(sender, instance, created, **kwargs):
         # 🔹 Send Activation Email to Accessor
         accessor_email = instance.email
         subject = "Activate Your Account"
+        # activation_message = f"""
+        # Hello {instance.first_name},
+        #
+        # Thank you for signing up as an accessor. To activate your account, please click the link below:
+        #
+        # {instance.activation_url}
+        #
+        # Best regards,
+        # Your Team
+        # """
         activation_message = f"""
-        Hello {instance.first_name},
-
-        Thank you for signing up as an accessor. To activate your account, please click the link below:
-
-        {instance.activation_url}
-
-        Best regards,
-        Your Team
-        """
+                <html>
+                    <body>
+                        <h2 style="color: #333; font-family: Arial, sans-serif;">Activate Your Account</h2>
+                        <p>Hello {instance.first_name},</p>
+                        <p>Thank you for signing up as an accessor. To activate your account, please click the link below:</p>
+                        <p style="margin-top: 20px;">
+                            <a href="{instance.activation_url}" style="color: #007bff;">Activate Your Account</a>
+                        </p>
+                        <p>Best regards,<br>HomeCert</p>
+                    </body>
+                </html>
+                """
         logger.info(f"📨 Sending activation email to {accessor_email}")
         send_gmail_api(subject, activation_message, accessor_email)
         logger.info(f"✅ Activation email sent to {accessor_email}")
@@ -147,18 +187,73 @@ def handle_password_reset_request(sender, instance, created, **kwargs):
 
         # Send Email with PIN
         subject = "Password Reset PIN"
+        # reset_message = f"""
+        # Hello {instance.first_name},
+        #
+        # You have requested to reset your password. Use the following PIN to reset it:
+        #
+        # PIN: {instance.pin}
+        #
+        # If you did not request this, please ignore this email.
+        #
+        # Best regards,
+        # Your Team
+        # """
         reset_message = f"""
-        Hello {instance.first_name},
-
-        You have requested to reset your password. Use the following PIN to reset it:
-
-        PIN: {instance.pin}
-
-        If you did not request this, please ignore this email.
-
-        Best regards,
-        Your Team
-        """
+                <html>
+                <head>
+                    <style>
+                        body {{
+                            font-family: 'Arial', sans-serif;
+                            background-color: #f3f4f6;
+                            color: #333;
+                            padding: 20px;
+                        }}
+                        .container {{
+                            max-width: 600px;
+                            margin: 0 auto;
+                            background-color: #ffffff;
+                            border: 1px solid #e5e7eb;
+                            border-radius: 10px;
+                            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                            padding: 30px;
+                        }}
+                        .header {{
+                            text-align: center;
+                            font-size: 24px;
+                            margin-bottom: 20px;
+                            color: #1f2937;
+                        }}
+                        .pin-code {{
+                            font-size: 28px;
+                            font-weight: bold;
+                            text-align: center;
+                            color: #ef4444;
+                            margin: 20px 0;
+                        }}
+                        .footer {{
+                            margin-top: 30px;
+                            font-size: 14px;
+                            text-align: center;
+                            color: #6b7280;
+                        }}
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">Password Reset Request</div>
+                        <p>Hello {instance.first_name},</p>
+                        <p>You have requested to reset your password. Please use the following PIN to reset it:</p>
+                        <div class="pin-code">{instance.pin}</div>
+                        <p>If you did not request this, please ignore this email.</p>
+                        <div class="footer">
+                            Best regards,<br/>
+                            HomeCert
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """
         logger.info(f"📨 Sending password reset email to {instance.email}")
         send_gmail_api(subject, reset_message, instance.email)
         logger.info(f"✅ Password reset email sent to {instance.email}")

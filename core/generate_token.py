@@ -4,10 +4,12 @@ import webbrowser
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.exceptions import RefreshError
+from django.conf import settings
 
 # 🔹 Set Paths
 CLIENT_SECRET_FILE = os.getenv('CLIENT_SECRET_FILE', r'C:\Users\Asim99x\Desktop\Booking-Management-main\gmail\client_secret.json')  # Update path if needed
-TOKEN_PATH = os.getenv('TOKEN_PATH', r'C:\Users\Asim99x\Desktop\Booking-Management-main\gmail\token.json')
+TOKEN_PATH = os.getenv('TOKEN_PATH', r'C:\Users\Asim99x\Desktop\Booking-Management-main\gmail\token.json') # delete the old token.json before running this script other wise it wont work
 
 # 🔹 Define Gmail API Scope
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
@@ -39,3 +41,4 @@ def generate_token():
 
 if __name__ == "__main__":
     generate_token()
+

@@ -63,91 +63,94 @@ class GetQuoteView(APIView):
         return Response(response_data, status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(request_body=QuoteSerializer)
-    # def put(self, request, pk):
-    #     """
-    #     Handle PUT request to update an existing GetQuote instance.
-    #     """
-    #     # Fetch the existing Quote instance by its primary key
-    #     quote = get_object_or_404(Quote, pk=pk)
-    #
-    #     # Pass the updated data from request.data to the serializer
-    #     serializer = QuoteSerializer(quote, data=request.data, partial=True)
-    #
-    #     if serializer.is_valid():
-    #         # Save the updated Quote instance
-    #         serializer.save()
-    #
-    #         return Response(serializer.data, status=status.HTTP_200_OK)
-    #
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     def put(self, request, pk):
         """
-        Update the Quote instance and create a user and job if all attributes except lidar are provided.
+        Update a Quote instance in multiple steps.
+        - If only property-related fields are provided, update the quote but do not create a job.
+        - If name, email, and mobile_number are provided, check if the user exists.
+        - If the user exists, create a new job for them.
+        - If the user does not exist, create the user first, then create the job.
         """
         quote = get_object_or_404(Quote, pk=pk)
 
+        # ✅ Allow updating quote fields gradually
         serializer = QuoteSerializer(quote, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            # Check if all required attributes except lidar are filled
-            required_fields = [
-                'name', 'email_address', 'mobile_number',
-                'building_type', 'preferred_date', 'preferred_time',
-                'property_type', 'property_size', 'bedrooms',
-                'heat_pump_installed', 'county', 'nearest_town', 'ber_purpose'
-            ]
+        # ✅ Required property-related fields (job should NOT be created if only these are updated)
+        property_fields = [
+            "preferred_date", "preferred_time", "property_type",
+            "building_type", "property_size", "bedrooms",
+            "heat_pump_installed", "county", "nearest_town", "ber_purpose"
+        ]
 
-            if all(getattr(quote, field) for field in required_fields):
-                # Update or create UserModel with user_type explicitly set to 'client'
-                email = quote.email_address
-                user, created = UserModel.objects.get_or_create(
-                    email=email,
-                    defaults={
-                        "first_name": quote.name.split()[0] if quote.name else "",
-                        "last_name": quote.name.split()[1] if quote.name and len(quote.name.split()) > 1 else "",
-                        "phone_number": quote.mobile_number,
-                        "password": str(uuid.uuid4())[:8],
-                        "user_type": "client"  # Ensure user_type is client
-                    }
-                )
-
-                # Ensure the Client instance exists and is linked to the user
-                client, client_created = Client.objects.get_or_create(
-                    user=user,
-                    defaults={
-                        "email": email,
-                        "phone_number": quote.mobile_number,
-                        "first_name": user.first_name,
-                        "last_name": user.last_name
-                    }
-                )
-
-                # Update or create Job linked to the correct Client
-                job, job_created = Job.objects.update_or_create(
-                    client=client,
-                    defaults={
-                        "building_type": quote.building_type,
-                        "preferred_date": quote.preferred_date,
-                        "preferred_time": quote.preferred_time,
-                        "property_type": quote.property_type,
-                        "property_size": quote.property_size,
-                        "bedrooms": quote.bedrooms,
-                        "additional_features": quote.additional_features,
-                        "heat_pump_installed": quote.heat_pump_installed,
-                        "county": quote.county,
-                        "nearest_town": quote.nearest_town,
-                        "ber_purpose": quote.ber_purpose,
-                        "name": quote.name,
-                        "email_address": quote.email_address,
-                        "mobile_number": quote.mobile_number,
-                        "status": "pending"
-                    }
-                )
-
+        # ✅ If only property-related fields are sent, update the quote and return response
+        if all(field in request.data for field in property_fields) and not any(
+                key in request.data for key in ["name", "email_address", "mobile_number"]
+        ):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # ✅ If user details are provided, proceed with user and job creation
+        email = request.data.get("email_address")
+        name = request.data.get("name")
+        phone = request.data.get("mobile_number")
+
+        if email and name and phone:
+            # ✅ Check if user exists
+            user = UserModel.objects.filter(email=email).first()
+
+            if not user:
+                # ✅ User does not exist, create a new one
+                user = UserModel.objects.create(
+                    email=email,
+                    first_name=name.split()[0] if name else "",
+                    last_name=name.split()[1] if len(name.split()) > 1 else "",
+                    phone_number=phone,
+                    password=str(uuid.uuid4())[:8],  # Generate random password
+                    user_type="client"
+                )
+
+            # ✅ Ensure the Client instance exists
+            client, client_created = Client.objects.get_or_create(
+                user=user,
+                defaults={
+                    "email": email,
+                    "phone_number": phone,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name
+                }
+            )
+
+            # ✅ Always create a new Job for this user (even if they exist)
+            job = Job.objects.create(
+                client=client,
+                building_type=quote.building_type,
+                preferred_date=quote.preferred_date,
+                preferred_time=quote.preferred_time,
+                property_type=quote.property_type,
+                property_size=quote.property_size,
+                bedrooms=quote.bedrooms,
+                heat_pump_installed=quote.heat_pump_installed,
+                county=quote.county,
+                nearest_town=quote.nearest_town,
+                ber_purpose=quote.ber_purpose,
+                status="pending",
+                name = user.first_name + " " + user.last_name if user.first_name and user.last_name else user.first_name,
+                email_address = user.email,
+                mobile_number = user.phone_number
+            )
+
+            return Response({
+                "quote": serializer.data,
+                "job_id": job.id
+            }, status=status.HTTP_200_OK)
+
+        # ✅ If user details are still missing, return only the updated quote
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class UserCreateAPIView(APIView):
     permission_classes = [AllowAny]

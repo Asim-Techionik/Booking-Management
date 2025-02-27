@@ -29,7 +29,7 @@ services:
       - your_network
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000 # ["./wait-for-it.sh", "db:5432", "--", "daphne", "-p", "8000", "-b", "0.0.0.0", "building.asgi:application"] #
+    command: ["./wait-for-it.sh", "db:5432", "--", "python", "manage.py", "runserver", "0.0.0.0:8000"]#python manage.py runserver 0.0.0.0:8000 # ["./wait-for-it.sh", "db:5432", "--", "daphne", "-p", "8000", "-b", "0.0.0.0", "building.asgi:application"] #
     volumes:
       - .:/app
       - ./gmail:/app/gmail  # ✅ Mount OAuth2 credentials

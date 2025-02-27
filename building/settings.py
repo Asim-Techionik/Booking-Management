@@ -165,7 +165,7 @@ CLIENT_SECRET_FILE = os.getenv('CLIENT_SECRET_FILE', '/app/gmail/client_secret.j
 TOKEN_PATH = os.getenv('TOKEN_PATH', '/app/gmail/token.json')
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # No SMTP, use console
-DEFAULT_FROM_EMAIL = 'asimirfan446@gmail.com'  # Ensure it's the Gmail API email
+DEFAULT_FROM_EMAIL = 'homecert.help0@gmail.com'  # Ensure it's the Gmail API email
 
 ADMINS = [
     ("Admin", "asimirfan.techionik@gmail.com")  # ✅ Replace with real admin email
